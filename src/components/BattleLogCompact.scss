@@ -1,0 +1,15 @@
+.battle-log-c {
+  width: 270px; height: 210px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 2px;
+  font-size: 12.5px; color: #9d9484; text-align: right;
+  padding: 6px 8px;
+  background: rgba(6, 5, 9, 0.55); border: 1px solid var(--border-soft); border-radius: 8px;
+  pointer-events: auto;
+}
+.battle-log-c::-webkit-scrollbar { width: 6px; }
+.battle-log-c::-webkit-scrollbar-track { background: transparent; }
+.battle-log-c::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.line.damage { color: #ff8a7a; }
+.line.heal { color: #7dff8a; }
+.line.state { color: #d187ff; }
+.line.info { color: #b9ac96; }

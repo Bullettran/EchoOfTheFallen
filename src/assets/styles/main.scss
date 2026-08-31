@@ -1,0 +1,89 @@
+/* ============================================================
+   Дизайн-система Echoes of the Fallen
+   Тёмное фэнтези: пепельные панели, позолота, кровавый акцент.
+   Все цвета — через переменные, чтобы темизировать в одном месте.
+   ============================================================ */
+:root {
+  --bg: #0b0a0f;
+  --bg-deep: #060509;
+  --panel: #14101a;
+  --panel-2: #1a1522;
+  --border: #3a3145;
+  --border-soft: #241d2e;
+
+  --text: #d8cfc0;
+  --text-bright: #f0e6d2;
+  --dim: #9d9484;
+  --faint: #6d6558;
+
+  --gold: #c9a86a;
+  --gold-bright: #ffd77a;
+  --blood: #a41f30;
+  --blood-bright: #ff4d4d;
+  --soul: #cabfe0;
+  --arcane: #c05bff;
+  --essence: #d187ff;
+
+  --font-serif: 'EB Garamond', 'Georgia', serif;
+
+  --radius: 10px;
+  --shadow-panel: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+}
+
+/* Заголовки и имена — всегда гарамонде */
+h1, h2, h3, h4, .serif { font-family: var(--font-serif); }
+
+button { font-family: inherit; }
+
+/* Тонкий скроллбар в духе темы */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+/* Общая виньетка поверх всего (придаёт «старение» экрана) */
+#app::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background:
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.35) 100%);
+}
+
+/* Кнопки-действия (общая база) */
+.btn {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  padding: 10px 24px;
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  color: var(--gold-bright);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--gold);
+  box-shadow: 0 0 14px rgba(201, 168, 106, 0.25);
+}
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Появление карточек/панелей */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
