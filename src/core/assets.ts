@@ -95,7 +95,7 @@ export function conditionIconUrl(type: string): string | null {
 }
 
 /** Идентификаторы сцен боя/хаба (= имена файлов без расширения). */
-export type SceneId = 'battle_crypt' | 'battle_ruins' | 'battle_shrine' | 'boss_throne' | 'hub_scene';
+export type SceneId = 'battle_crypt' | 'battle_ruins' | 'battle_shrine' | 'boss_throne' | 'hub_scene' | 'ash_city' | 'ash_market' | 'fire_temple' | 'mage_tower' | 'king_palace';
 
 /** Фон сцены. hub_scene — фон убежища, остальные — бои. */
 export function sceneUrl(scene: SceneId): string | null {

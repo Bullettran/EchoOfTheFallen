@@ -73,7 +73,11 @@ export class StoryEngine {
     return this.nodes[this.currentNodeId]!;
   }
 
-  /** Видимые выборы текущего узла (с учётом флагов). */
+  /** Ресурсы игрока для requires-фильтра (синхронизирует стор перед loadNode) */
+  playerSouls = 0;
+  playerAshShards = 0;
+
+  /** Видимые выборы текущего узла (флаги + ресурсы). */
   visibleChoices(): StoryChoice[] {
     return (this.node.choices ?? []).filter((c) => this.isChoiceVisible(c));
   }
@@ -177,6 +181,10 @@ export class StoryEngine {
   private isChoiceVisible(c: StoryChoice): boolean {
     if (c.requiresFlags && !c.requiresFlags.every((f) => this.flags.has(f))) return false;
     if (c.hideIfFlags && c.hideIfFlags.some((f) => this.flags.has(f))) return false;
+    if (c.requires) {
+      if (c.requires.souls !== undefined && this.playerSouls < c.requires.souls) return false;
+      if (c.requires.ashShards !== undefined && this.playerAshShards < c.requires.ashShards) return false;
+    }
     return true;
   }
 

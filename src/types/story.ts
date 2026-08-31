@@ -70,6 +70,8 @@ export interface StoryChoice {
   requiresFlags?: string[];
   /** Скрыть при наличии ЛЮБОГО из флагов */
   hideIfFlags?: string[];
+  /** Требуемые ресурсы (скрывает выбор если не хватает) */
+  requires?: { souls?: number; ashShards?: number };
   check?: StoryCheck;
   /** Исход при успехе проверки (или без проверки) */
   success: ChoiceOutcome;

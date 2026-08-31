@@ -35,6 +35,8 @@ export interface ProfileData {
   ashShards: number;
   /** Сколько актов пройдено (1 = Акт I done, 2 = Акт II done) */
   actsCompleted: number;
+  /** Story-статы последнего завершённого акта (переносятся в следующий акт) */
+  storyStats: Record<string, number>;
   /** Туториал первого боя показан */
   tutorialDone: boolean;
   /** Звук выключен (M / кнопка) */
@@ -58,6 +60,7 @@ function freshProfile(): ProfileData {
     storyCheckpoint: null,
     ashShards: 0,
     actsCompleted: 0,
+    storyStats: {},
     tutorialDone: false,
     audioMuted: false,
   };
@@ -111,6 +114,10 @@ export const useMetaStore = defineStore('meta', {
       }
       if (loaded && loaded.version === 1) {
         this.$patch(loaded);
+        // Санитизация: ресурсы не могут быть отрицательными (баг Рынка)
+        if (this.souls < 0) this.souls = 0;
+        if (this.essences < 0) this.essences = 0;
+        if (this.ashShards < 0) this.ashShards = 0;
         syncUidCounter(this.collection);
       }
       // Любое дальнейшее изменение → автосохранение

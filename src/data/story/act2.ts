@@ -11,7 +11,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   // ================= СЦЕНА 1. Вход в Пепельный город =================
   city_gate: {
     id: 'city_gate',
-    scene: 'battle_ruins',
+    scene: 'ash_city',
     text: [
       'Ты проходишь через Врата Восхождения. Перед тобой — руины города. Когда-то здесь были улицы, дома, храмы. Теперь — только пепел и чёрный камень. Ветер носит золу. Вдали — силуэт огромного Дворца.',
       '«Ты слышал о нём. Ты чувствовал его. Пепельный город. Здесь жили тысячи. Здесь они сгорели. Под ногами — не камень, а спекшийся пепел. Город помнит. Город ждёт.»',
@@ -31,7 +31,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   },
   guard_fallen: {
     id: 'guard_fallen',
-    scene: 'battle_ruins',
+    scene: 'ash_city',
     speaker: 'Пепельный страж',
     text: [
       '«Ты сильнее, чем я думал... Но город не прощает. Ты не сможешь пройти через Тень. Она ждёт тебя...»',
@@ -44,7 +44,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   // ================= СЦЕНА 2. Встреча с Тенью =================
   shadow_meet: {
     id: 'shadow_meet',
-    scene: 'battle_ruins',
+    scene: 'ash_city',
     speaker: 'Тень',
     text: [
       'Из тени выходит фигура — не совсем материальная. Женщина с длинными тёмными волосами, но вместо лица — маска из пепла.',
@@ -128,7 +128,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   // ================= СЦЕНА 3. Рынок (хаб) =================
   market: {
     id: 'market',
-    scene: 'battle_ruins',
+    scene: 'ash_market',
     text: [
       'Ты выходишь на большую площадь. Обгоревшие прилавки. Но кто-то всё ещё жив: фигуры, которые двигаются среди руин.',
       '«Рынок мёртвых. Но не совсем. Здесь всё ещё торгуют. Душами, памятью, ложью.»',
@@ -136,11 +136,50 @@ export const ACT2_NODES: Record<string, StoryNode> = {
     choices: [
       {
         text: '💠 Обменять 100 душ → 1 Пепельный осколок',
+        requires: { souls: 100 },
         success: { souls: -100, ashShards: 1, next: 'market' },
       },
       {
         text: '⚒ Купить «Пепельный клинок» (50 душ + 1 осколок)',
+        requires: { souls: 50, ashShards: 1 },
+        hideIfFlags: ['bought_blade'],
         success: { souls: -50, ashShards: -1, cards: ['ash_blade'], flags: ['bought_blade'], next: 'market' },
+      },
+      {
+        text: '🧪 Элексир мощи (+1 Сила)',
+        requires: { ashShards: 1 },
+        hideIfFlags: ['elix_str'],
+        success: { ashShards: -1, stats: { strength: 1 }, flags: ['elix_str'], next: 'market' },
+      },
+      {
+        text: '🧪 Элексир знания (+1 Интеллект)',
+        requires: { ashShards: 1 },
+        hideIfFlags: ['elix_int'],
+        success: { ashShards: -1, stats: { intellect: 1 }, flags: ['elix_int'], next: 'market' },
+      },
+      {
+        text: '🧪 Элексир памяти (+1 Память)',
+        requires: { ashShards: 1 },
+        hideIfFlags: ['elix_mem'],
+        success: { ashShards: -1, stats: { memory: 1 }, flags: ['elix_mem'], next: 'market' },
+      },
+      {
+        text: '🧪 Элексир стойкости (+1 Упорство)',
+        requires: { ashShards: 1 },
+        hideIfFlags: ['elix_res'],
+        success: { ashShards: -1, stats: { resolve: 1 }, flags: ['elix_res'], next: 'market' },
+      },
+      {
+        text: '🧪 Элексир покоя (+1 Искренность)',
+        requires: { ashShards: 1 },
+        hideIfFlags: ['elix_sin'],
+        success: { ashShards: -1, stats: { sincerity: 1 }, flags: ['elix_sin'], next: 'market' },
+      },
+      {
+        text: '🧪 Элексир ярости (+1 Гнев)',
+        requires: { ashShards: 1 },
+        hideIfFlags: ['elix_wra'],
+        success: { ashShards: -1, stats: { wrath: 1 }, flags: ['elix_wra'], next: 'market' },
       },
       { text: '→ Храм Огня (налево)', hideIfFlags: ['temple_done'], success: { next: 'temple' } },
       { text: '→ Башня Магов (направо)', hideIfFlags: ['tower_done'], success: { next: 'tower' } },
@@ -155,7 +194,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   // ================= СЦЕНА 4А. Храм Огня =================
   temple: {
     id: 'temple',
-    scene: 'battle_shrine',
+    scene: 'fire_temple',
     speaker: 'Жрец-призрак',
     text: [
       'Огромный храм. Внутри — тысяча свечей, которые горят без огня. В центре — фигура жреца. Он сгорел, но его голос всё ещё звучит.',
@@ -213,7 +252,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   },
   temple_more: {
     id: 'temple_more',
-    scene: 'battle_shrine',
+    scene: 'fire_temple',
     speaker: 'Жрец-призрак',
     text: [
       '«Хочешь ещё? Тогда докажи, что достоин правды. Огонь не прощает слабых.»',
@@ -235,7 +274,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   },
   temple_done: {
     id: 'temple_done',
-    scene: 'battle_shrine',
+    scene: 'fire_temple',
     text: [
       'Жрец-призрак растворяется в пламени свечей. В воздухе остаётся запах пепла и чего-то древнего. (+60 душ, +2 осколка, карта «Пламя воспоминаний»)',
     ],
@@ -248,7 +287,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   // ================= СЦЕНА 4Б. Башня Магов =================
   tower: {
     id: 'tower',
-    scene: 'battle_shrine',
+    scene: 'mage_tower',
     speaker: 'Маг-голограмма',
     text: [
       'Винтовая лестница. Магические символы на каждом этаже. Наверху — разрушенная комната. В центре — голограмма мага.',
@@ -305,7 +344,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   },
   tower_more: {
     id: 'tower_more',
-    scene: 'battle_shrine',
+    scene: 'mage_tower',
     speaker: 'Маг-голограмма',
     text: [
       '«Хочешь большего? Магия охраняет себя сама. Голем пробудился.»',
@@ -327,7 +366,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   },
   tower_done: {
     id: 'tower_done',
-    scene: 'battle_shrine',
+    scene: 'mage_tower',
     text: [
       'Голем рассыпается на руны. Они гаснут одна за другой. (+65 душ, +2 осколка, карта «Магический удар»)',
     ],
@@ -340,7 +379,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   // ================= СЦЕНА 5. Возвращение на площадь =================
   plaza_return: {
     id: 'plaza_return',
-    scene: 'battle_ruins',
+    scene: 'ash_city',
     speaker: 'Тень',
     text: [
       'Ты возвращаешься на площадь. Тень уже ждёт тебя.',
@@ -395,7 +434,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   // ================= СЦЕНА 6. Осада теней =================
   siege: {
     id: 'siege',
-    scene: 'battle_ruins',
+    scene: 'ash_city',
     text: [
       'Ты идёшь по улицам города. Внезапно из каждой тени выходят фигуры. Ты окружён.',
       '«Город не хочет, чтобы ты шёл дальше. Тени поднимаются со всех сторон. Ты должен прорваться.»',
@@ -413,7 +452,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   },
   siege_done: {
     id: 'siege_done',
-    scene: 'battle_ruins',
+    scene: 'ash_city',
     text: [
       'Последняя тень растворяется. Улица свободна. (+80 душ, +3 осколка, карта «Волна пепла»)',
     ],
@@ -426,7 +465,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   // ================= СЦЕНА 7-8. Дворец и БОСС =================
   palace: {
     id: 'palace',
-    scene: 'boss_throne',
+    scene: 'king_palace',
     text: [
       'Огромное здание из чёрного камня. Внутри — пустота. Ты чувствуешь, что кто-то ждёт тебя.',
       '«Дворец. Здесь всё началось. Здесь всё закончится. Огромный зал. Трон. Фигура. Она не двигается. Но она знает, что ты здесь.»',
@@ -452,7 +491,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   // ================= ЭПИЛОГ =================
   act2_epilogue: {
     id: 'act2_epilogue',
-    scene: 'boss_throne',
+    scene: 'king_palace',
     speaker: 'Тень Короля',
     text: [
       '«Ты... победил меня. Но я — часть тебя. Ты не можешь убить себя. Ты можешь только принять себя. Ты — Король. Ты создал это. И ты должен закончить это. Иди в Огненное сердце. Там ты найдёшь истину. И там ты выберешь свою судьбу.»',
@@ -475,7 +514,7 @@ export const ACT2_NODES: Record<string, StoryNode> = {
   },
   act2_end: {
     id: 'act2_end',
-    scene: 'boss_throne',
+    scene: 'king_palace',
     text: ['Ты возвращаешься в убежище. Корона ждёт. Пламя внутри тебя горит ровно.'],
   },
 };

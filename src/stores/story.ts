@@ -75,7 +75,6 @@ export const useStoryStore = defineStore('story', {
       const engine = new StoryEngine({ nodes, startNode, sceneScopes });
       let restored = false;
       if (resume && meta.storyCheckpoint) {
-        // чекпоинт применим только к своему акту
         const cpNode = meta.storyCheckpoint.nodeId;
         if (nodes[cpNode]) {
           restored = engine.restore(meta.storyCheckpoint);
@@ -83,6 +82,17 @@ export const useStoryStore = defineStore('story', {
       }
       if (!restored) {
         meta.storyCheckpoint = null;
+        // Переносим статы из предыдущего акта (Акт 2 наследует Акт 1)
+        if (actId > 1 && Object.keys(meta.storyStats).length > 0) {
+          for (const [k, v] of Object.entries(meta.storyStats)) {
+            engine.stats[k as keyof typeof engine.stats] = v;
+          }
+        }
+        // Бонус Алтаря: боевые ветви дают story-статы (уровень 3+ → +1, 7+ → +2)
+        const altarBonus = this.altarStoryBonus(meta.skills);
+        for (const [k, v] of Object.entries(altarBonus)) {
+          engine.stats[k as keyof typeof engine.stats] += v;
+        }
       }
       this.engine = engine;
       this.actId = actId;
@@ -148,6 +158,11 @@ export const useStoryStore = defineStore('story', {
           meta.deckUids.push(card.uid);
         }
       }
+      // Бонус Алтаря действует и на новые раны Акта 1 (межпрогоновая прогрессия)
+      const altarBonus = this.altarStoryBonus(meta.skills);
+      for (const [k, v] of Object.entries(altarBonus)) {
+        engine.stats[k as keyof typeof engine.stats] += v;
+      }
 
       this.engine = engine;
       this.actId = actId;
@@ -168,6 +183,10 @@ export const useStoryStore = defineStore('story', {
     loadNode(): void {
       const e = this.engine;
       if (!e) return;
+      // Синхронизируем ресурсы для requires-фильтра (Рынок)
+      const meta = useMetaStore();
+      e.playerSouls = meta.souls;
+      e.playerAshShards = meta.ashShards;
       // автопереходы без выбора прокручиваем сразу
       let guard = 0;
       while (e.advanceAuto() && guard++ < 10) {
@@ -218,6 +237,14 @@ export const useStoryStore = defineStore('story', {
     confirmRoll(): void {
       if (!this.rollResult || !this.pendingChoice) return;
       this.pendingBranch = this.rollResult.success ? 'success' : 'fail';
+      // Прокачка: успешная проверка → +1 к стату (в духе Disco Elysium)
+      if (this.rollResult.success && this.engine) {
+        this.engine.stats[this.rollResult.stat] += 1;
+        eventBus.emit('log:message', {
+          text: `${STORY_STAT_NAMES[this.rollResult.stat]} растёт (+1)`,
+          kind: 'state',
+        });
+      }
       this.rollResult = null;
       this.finishChoice();
     },
@@ -279,11 +306,35 @@ export const useStoryStore = defineStore('story', {
       }
     },
 
-    /** Завершение акта: флаги, чекпоинт, финальный экран. */
+    /** Бонусные story-статы из боевых ветвей Алтаря (3 уровня → +1, 7 → +2). */
+    altarStoryBonus(skills: Record<string, number>): Record<string, number> {
+      const bonus: Record<string, number> = {};
+      const MAP: Array<[string, string]> = [
+        ['strength', 'strength'],      // боевая Сила → story Сила
+        ['intellect', 'intellect'],    // боевая Интеллект → story Интеллект
+        ['dexterity', 'resolve'],      // Ловкость → Упорство
+        ['endurance', 'sincerity'],    // Выносливость → Искренность
+        ['spirit', 'wrath'],           // Дух → Гнев
+      ];
+      for (const [branchId, statId] of MAP) {
+        const lvl = skills[branchId] ?? 0;
+        if (lvl >= 7) bonus[statId] = (bonus[statId] ?? 0) + 2;
+        else if (lvl >= 3) bonus[statId] = (bonus[statId] ?? 0) + 1;
+      }
+      // Память — от суммарного уровня всех ветвей (опыт = память)
+      const total = Object.values(skills).reduce((a, b) => a + b, 0);
+      if (total >= 25) bonus.memory = (bonus.memory ?? 0) + 2;
+      else if (total >= 12) bonus.memory = (bonus.memory ?? 0) + 1;
+      return bonus;
+    },
+
+    /** Завершение акта: флаги, чекпоинт, перенос статов, финальный экран. */
     completeAct(): void {
       const engine = this.engine;
       if (!engine) return;
       const meta = useMetaStore();
+      // Сохраняем статы для следующего акта
+      meta.storyStats = { ...engine.stats };
       this.engine = null;
       this.actActive = false;
       const ui = useUiStore();
@@ -331,12 +382,19 @@ export const useStoryStore = defineStore('story', {
       if (a.souls === 0 && a.cards.length === 0 && a.essences === 0 && a.ashShards === 0 && a.lore.length === 0) return;
       const meta = useMetaStore();
       if (a.souls !== 0) {
-        meta.souls += a.souls;
-        if (a.souls > 0) meta.stats.soulsEarned += a.souls;
-        if (a.souls > 0) this.actSouls += a.souls;
+        // Защита от минуса: не списываем больше чем есть
+        const actualSouls = a.souls < 0 ? Math.max(a.souls, -meta.souls) : a.souls;
+        meta.souls += actualSouls;
+        if (actualSouls > 0) {
+          meta.stats.soulsEarned += actualSouls;
+          this.actSouls += actualSouls;
+        }
       }
       if (a.essences > 0) meta.essences += a.essences;
-      if (a.ashShards !== 0) meta.ashShards += a.ashShards;
+      if (a.ashShards !== 0) {
+        const actualShards = a.ashShards < 0 ? Math.max(a.ashShards, -meta.ashShards) : a.ashShards;
+        meta.ashShards += actualShards;
+      }
       for (const defId of a.cards) meta.grantCard(defId);
       for (const loreId of a.lore) {
         if (!meta.lore.includes(loreId)) meta.lore.push(loreId);
