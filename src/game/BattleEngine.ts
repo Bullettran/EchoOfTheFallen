@@ -218,10 +218,8 @@ export class BattleEngine {
     if (this.stats.healPerTurn > 0) this.heal(this.player, this.stats.healPerTurn);
     this.tickStates(this.player);
     if (this.checkDeath()) return;
-    this.discardPile.push(...this.hand);
-    this.hand = [];
-    // Фазу ставим, но план строит СТОР единственным вызовом beginEnemyTurn()
-    // (двойной вызов дважды инкрементировал turn и дублировал ритуалы)
+    // НЕ сбрасываем руку: несыгранные карты сохраняются для комбинаций
+    // (добор до cardsPerTurn происходит в beginPlayerTurn)
     this.phase = 'enemy';
   }
 
@@ -351,6 +349,7 @@ export class BattleEngine {
     this.energy = BALANCE.player.energyPerTurn + this.stats.energyPerTurnBonus;
     const cardsPerTurn = BALANCE.player.cardsPerTurn + this.stats.cardsPerTurnBonus;
 
+    // Добор руки ДО cardsPerTurn (несыгранные карты сохраняются для комбинаций)
     while (this.hand.length < cardsPerTurn) {
       if (this.drawPile.length === 0) {
         if (this.discardPile.length === 0) break;

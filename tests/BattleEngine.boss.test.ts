@@ -194,18 +194,20 @@ describe('BattleEngine: босс и смерть', () => {
     expect(e.enemy.hp).toBe(0);
   });
 
-  it('цикл колоды: сброс руки, рефилл из сброса при пустой колоде', () => {
-    const e = makeEngine(['strike', 'guard', 'guard', 'guard', 'guard']);
+  it('цикл колоды: рука СОХРАНЯЕТСЯ между ходами, добор до 5', () => {
+    const e = makeEngine(['strike', 'strike', 'strike', 'guard', 'guard', 'guard', 'guard', 'guard', 'strike', 'guard']);
     e.start();
     expect(e.hand.length).toBe(5);
-    expect(e.drawPile.length).toBe(0);
-    e.endPlayerTurn(); // рука → сброс (5), finish не звали — добор на новом ходе
-    expect(e.hand.length).toBe(0);
-    expect(e.discardPile.length).toBe(5);
-    e.finishEnemyTurn(); // beginPlayerTurn: рефилл из сброса
+    expect(e.drawPile.length).toBe(5);
+    // играем 2 карты
+    playByDefId(e, 'strike');
+    playByDefId(e, 'guard');
+    expect(e.hand.length).toBe(3);
+    e.endPlayerTurn();
+    e.beginEnemyTurn();
+    e.finishEnemyTurn();
+    // рука сохранила 3 карты + добор до 5
     expect(e.hand.length).toBe(5);
-    expect(e.drawPile.length).toBe(0);
-    expect(e.discardPile.length).toBe(0);
   });
 
   it('блок игрока сбрасывается в начале его хода', () => {

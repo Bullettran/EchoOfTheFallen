@@ -57,19 +57,19 @@ describe('CardFactory', () => {
 describe('EnemyFactory: скейлинг глубины', () => {
   it('глубина 1 не меняет врага', () => {
     const s = scaleEnemy('fallen_soldier', 1);
-    expect(s.def.maxHp).toBe(42);
+    expect(s.def.maxHp).toBe(44); // 42 × 1.05 (баланс сохранения руки)
     expect(s.def.soulsDrop).toBe(60);
     expect(s.dmgBonus).toBe(0);
   });
 
   it('глубина 5 усиливает HP/души/эссенции/урон', () => {
     const s = scaleEnemy('fallen_soldier', 5);
-    expect(s.def.maxHp).toBe(Math.round(42 * (1 + 0.12 * 4))); // 62
+    expect(s.def.maxHp).toBe(Math.round(44 * (1 + 0.12 * 4))); // 65
     expect(s.def.soulsDrop).toBe(Math.round(60 * (1 + 0.25 * 4))); // 120
     expect(s.def.essenceChance).toBeCloseTo(0.3 + 0.04 * 4);
     expect(s.dmgBonus).toBe(2);
     // базовый реестр не мутирован
-    expect(scaleEnemy('fallen_soldier', 1).def.maxHp).toBe(42);
+    expect(scaleEnemy('fallen_soldier', 1).def.maxHp).toBe(44);
   });
 
   it('шанс эссенции не превышает потолок 60%', () => {
