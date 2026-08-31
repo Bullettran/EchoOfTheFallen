@@ -1,0 +1,61 @@
+{
+  "name": "echoes-of-the-fallen",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Dark fantasy card RPG roguelike deckbuilder",
+  "main": "dist-electron/main.js",
+  "build": {
+    "appId": "com.echoesofthefallen.game",
+    "productName": "Echoes of the Fallen",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "dist-electron/**"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "vue-tsc --noEmit",
+    "build": "vite build",
+    "compile:electron": "tsc -p electron/tsconfig.json",
+    "electron:dev": "concurrently -k \"vite\" \"pnpm compile:electron && wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
+    "electron:build": "pnpm typecheck && pnpm build && pnpm compile:electron && electron-builder --win",
+    "dist": "pnpm typecheck && pnpm build && pnpm compile:electron && node scripts/make-portable.cjs"
+  },
+  "dependencies": {
+    "@fontsource/eb-garamond": "^5.3.0",
+    "mitt": "^3.0.1",
+    "phaser": "^4.2.1",
+    "pinia": "^4.0.3",
+    "vue": "^3.5.41"
+  },
+  "devDependencies": {
+    "@types/node": "^26.3.0",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "concurrently": "^10.0.5",
+    "cross-env": "^10.1.0",
+    "electron": "^44.0.0",
+    "electron-builder": "^26.15.3",
+    "jsdom": "^30.0.1",
+    "playwright": "^1.62.1",
+    "sass": "^1.103.1",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.3",
+    "vitest": "^4.1.11",
+    "vue-tsc": "^3.3.11",
+    "wait-on": "^9.1.0"
+  }
+}

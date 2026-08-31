@@ -1,0 +1,24 @@
+.forge { display: flex; gap: 20px; height: 100%; }
+.grid { flex: 1;
+  padding: 12px; display: flex; flex-wrap: wrap; gap: 12px; align-content: flex-start; overflow-y: auto; }
+.panel {
+  width: 280px; background: #14101a; border: 1px solid #3a3145; border-radius: 10px;
+  padding: 18px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto;
+}
+.panel.empty { color: #9d9484; }
+.panel h3 { font-family: serif; color: #e8dfc8; }
+.lvl { font-size: 14px; color: #e0a63c; margin-left: 8px; }
+.desc { color: #b9ac96; font-size: 14px; }
+.gain { color: #7dd87d; font-size: 14px; }
+.gain.max { color: #e0a63c; }
+.hint { color: #6d6558; font-size: 13px; }
+button {
+  font-family: serif; font-size: 15px; padding: 8px 16px;
+  background: #241b30; color: #ffd77a; border: 1px solid #6a5a4a; border-radius: 6px; cursor: pointer;
+}
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+button:hover:not(:disabled) { border-color: #c9a86a; }
+.art-preview {
+  width: 100%; aspect-ratio: 1; object-fit: cover;
+  border: 1px solid #3a3145; border-radius: 8px;
+}

@@ -1,0 +1,25 @@
+.ash-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  overflow: hidden;
+}
+.ash {
+  position: absolute;
+  top: -2%;
+  border-radius: 50%;
+  background: #b9b2a4;
+  animation-name: ash-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.ash.ember {
+  background: #d98a4a;
+  box-shadow: 0 0 6px 1px rgba(217, 138, 74, 0.55);
+}
+@keyframes ash-fall {
+  0% { transform: translate(0, -2vh); }
+  50% { transform: translate(var(--drift), 50vh); }
+  100% { transform: translate(calc(var(--drift) * -0.4), 104vh); }
+}

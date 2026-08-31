@@ -1,0 +1,33 @@
+.finale {
+  width: 100%; height: 100%;
+  background-color: var(--bg);
+  background-size: cover; background-position: center;
+}
+.shade {
+  width: 100%; height: 100%;
+  background: radial-gradient(ellipse at center, rgba(6,5,9,0.45) 0%, rgba(6,5,9,0.9) 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+}
+.ornament { color: var(--gold); opacity: 0.6; letter-spacing: 4px; }
+h1 {
+  font-size: 52px; letter-spacing: 12px; font-weight: 600; color: var(--text-bright);
+  text-shadow: 0 4px 30px rgba(201, 168, 106, 0.35);
+}
+.quote { font-family: var(--font-serif); font-style: italic; font-size: 17px; color: var(--dim); max-width: 560px; text-align: center; line-height: 1.5; }
+.results { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.res { display: flex; align-items: center; gap: 10px; }
+.icon { width: 24px; height: 24px; object-fit: contain; }
+.value { font-family: var(--font-serif); font-size: 32px; color: var(--gold-bright); }
+.label { font-size: 14px; color: var(--dim); }
+.line { font-size: 14px; color: var(--essence); }
+.next { font-size: 13px; letter-spacing: 3px; text-transform: uppercase; color: var(--faint); margin-top: 8px; }
+.buttons { display: flex; gap: 12px; margin-top: 10px; }
+.btn {
+  font-family: var(--font-serif); font-size: 18px; padding: 11px 34px;
+  background: rgba(20, 16, 26, 0.85); color: var(--text-bright);
+  border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.btn:hover { border-color: var(--gold); box-shadow: 0 0 18px rgba(201, 168, 106, 0.25); }
+.btn.primary { border-color: #5b4480; color: #e2d4ff; }
+.btn.primary:hover { border-color: var(--arcane); }

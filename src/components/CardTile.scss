@@ -1,0 +1,47 @@
+.tile {
+  position: relative; width: 136px; min-height: 172px;
+  background-color: #171223;
+  background-image: linear-gradient(180deg, #1d1826, #120e18);
+  background-size: 100% 100%;
+  background-position: center;
+  border: 2px solid; border-radius: 10px;
+  padding: 16px 8px 8px;
+  display: flex; flex-direction: column; gap: 4px; text-align: center;
+  cursor: pointer; user-select: none;
+  transition: transform 0.12s;
+  overflow: hidden;
+}
+/* Без рамки арт — фоновая обложка, тексту нужен контраст */
+.tile:not(.framed)::before {
+  content: '';
+  position: absolute; inset: 0; border-radius: 8px;
+  background: linear-gradient(180deg, rgba(10, 8, 14, 0.25) 0%, rgba(10, 8, 14, 0.88) 55%);
+}
+.tile:not(.framed) > * { position: relative; }
+/* С рамкой: окно арта под светлой шапкой орнамента, текст в тёмной зоне */
+.tile.framed { padding-top: 110px; }
+.tile.framed .badge { display: none; }
+.art-window {
+  position: absolute; top: 26px; left: 30px; right: 10px; height: 78px;
+  object-fit: cover; border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+}
+.tile:hover { transform: translateY(-4px); }
+.tile.selected { outline: 2px solid #ffd77a; box-shadow: 0 0 14px rgba(255, 215, 122, 0.35); }
+.cost {
+  position: absolute; top: -8px; left: -8px; z-index: 2;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: radial-gradient(circle, #ffd77a, #b8860b);
+  color: #241a05; font-weight: bold; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid #241a05;
+}
+.badge {
+  position: absolute; top: 4px; right: 6px; z-index: 2;
+  font-size: 11px; color: #0e0c12;
+  background: #8fae6d; padding: 1px 6px; border-radius: 8px;
+}
+.name { font-family: var(--font-serif); font-size: 14.5px; color: #e8dfc8; }
+.up { color: #7dd87d; }
+.type { font-size: 11px; color: #7d7466; text-transform: uppercase; letter-spacing: 1px; }
+.desc { font-size: 12.5px; color: #b9ac96; flex: 1; }

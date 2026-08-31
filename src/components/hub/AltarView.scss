@@ -1,0 +1,47 @@
+.altar { display: flex; flex-direction: column; gap: 16px; height: 100%; }
+.branches { display: flex; gap: 10px; }
+.branch-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: #14101a; border: 1px solid #3a3145; border-radius: 8px;
+  padding: 10px; cursor: pointer; color: #b9ac96;
+}
+.branch-btn.active { border-color: var(--c); box-shadow: 0 0 10px color-mix(in srgb, var(--c) 30%, transparent); }
+.branch-btn .icon { font-size: 22px; }
+.branch-btn .bname { font-family: serif; font-size: 16px; color: #e8dfc8; }
+.branch-btn .blvl { font-size: 13px; color: #7d7466; }
+.tree {
+  flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+  padding-right: 6px;
+}
+.node {
+  display: flex; align-items: center; gap: 12px;
+  background: #14101a; border: 1px solid #2a2433; border-radius: 8px; padding: 8px 12px;
+  opacity: 0.45;
+}
+.node.owned { opacity: 1; border-color: var(--c); }
+.node.next { opacity: 1; border-color: #6a5a4a; background: #1a1522; }
+.node.special .lvl-num { color: #e0a63c; }
+.node.ultimate .lvl-num { color: #c05bff; }
+.node.ultimate.next { border-color: #7a4fa8; }
+.lvl-num {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: bold; background: #0e0c12; border: 1px solid #3a3145; color: #b9ac96;
+}
+.node-info { display: flex; flex-direction: column; flex: 1; }
+.node-name { font-family: serif; font-size: 16px; color: #e8dfc8; }
+.node-desc { font-size: 13px; color: #9d9484; }
+.mark.owned { color: #7dd87d; font-weight: bold; }
+.mark.cost { color: #ffd77a; font-size: 13px; }
+.footer {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #14101a; border: 1px solid #3a3145; border-radius: 8px; padding: 12px 16px;
+}
+.footer p { color: #b9ac96; font-size: 15px; }
+.footer .souls { color: #ffd77a; }
+.footer .maxed { color: #e0a63c; font-family: serif; }
+button {
+  font-family: serif; font-size: 15px; padding: 8px 20px;
+  background: #241b30; color: #ffd77a; border: 1px solid #6a5a4a; border-radius: 6px; cursor: pointer;
+}
+button:disabled { opacity: 0.4; cursor: not-allowed; }

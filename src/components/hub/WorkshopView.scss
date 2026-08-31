@@ -1,0 +1,24 @@
+.workshop { display: flex; flex-direction: column; gap: 20px; height: 100%; }
+.intro p { color: #b9ac96; font-size: 15px; }
+.price { color: #ffd77a; }
+.res { color: #d8cfc0; }
+.types { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+.types button, .cancel {
+  font-family: serif; font-size: 16px; padding: 12px 26px;
+  background: #241b30; color: #ffd77a; border: 1px solid #6a5a4a; border-radius: 6px; cursor: pointer;
+}
+.types button:disabled { opacity: 0.4; cursor: not-allowed; }
+.hint { color: #6d6558; font-size: 12px; width: 100%; }
+.choose { color: #9d9484; font-size: 15px; }
+.cards { display: flex; gap: 16px; }
+.option {
+  width: 180px; background: linear-gradient(180deg, #1d1826, #120e18);
+  border: 2px solid #5b8ee5; border-radius: 10px; padding: 18px 12px;
+  text-align: center; cursor: pointer; display: flex; flex-direction: column; gap: 8px;
+  transition: transform 0.12s;
+}
+.option:hover { transform: translateY(-6px); border-color: #ffd77a; }
+.name { font-family: serif; font-size: 17px; color: #e8dfc8; }
+.cost { font-size: 13px; color: #ffd77a; }
+.desc { font-size: 13px; color: #b9ac96; flex: 1; }
+.cta { font-size: 14px; color: #7dd87d; letter-spacing: 1px; }

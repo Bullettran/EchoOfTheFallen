@@ -1,0 +1,58 @@
+.class-select {
+  width: 100%; height: 100%;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(90, 60, 140, 0.22) 0%, transparent 55%),
+    linear-gradient(180deg, #100c16 0%, #060509 80%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 34px;
+  padding: 24px;
+}
+
+.intro { text-align: center; }
+.whisper {
+  font-family: var(--font-serif); font-style: italic; font-size: 19px;
+  color: var(--gold); line-height: 1.6; letter-spacing: 1px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+
+.cards { display: flex; gap: 16px; }
+
+.cls-card {
+  width: 210px; padding: 20px 16px 16px;
+  background: linear-gradient(180deg, rgba(34, 26, 46, 0.92), rgba(16, 12, 22, 0.96));
+  border: 2px solid var(--border); border-radius: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+  cursor: pointer; text-align: center;
+  transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
+  animation: rise-in 0.4s ease-out backwards;
+}
+.cls-card:nth-child(1) { animation-delay: 0.05s; }
+.cls-card:nth-child(2) { animation-delay: 0.12s; }
+.cls-card:nth-child(3) { animation-delay: 0.19s; }
+.cls-card:nth-child(4) { animation-delay: 0.26s; }
+.cls-card:nth-child(5) { animation-delay: 0.33s; }
+.cls-card:hover {
+  border-color: var(--gold); transform: translateY(-8px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 22px rgba(201, 168, 106, 0.22);
+}
+
+.cls-card h3 {
+  font-size: 23px; color: var(--text-bright); letter-spacing: 2px;
+}
+.quote {
+  font-family: var(--font-serif); font-style: italic; font-size: 13.5px;
+  color: var(--gold); opacity: 0.9;
+}
+.desc { font-size: 13px; color: var(--dim); line-height: 1.5; flex: 1; }
+.stats {
+  font-family: var(--font-serif); font-size: 15px; color: var(--gold-bright);
+  border-top: 1px solid var(--border-soft); padding-top: 9px;
+}
+.card-gain {
+  font-size: 12px; color: #7dd87d;
+  background: rgba(10, 30, 14, 0.35); border-radius: 8px; padding: 5px 8px;
+}
+
+.back {
+  background: none; border: none; color: var(--faint); font-size: 14px; cursor: pointer;
+}
+.back:hover { color: var(--text-bright); }
