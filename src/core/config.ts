@@ -43,5 +43,22 @@ export const BALANCE = {
     dmgBonusPerDepth: 0.5,
     /** Этаж босса: после стольких выборов узлов (карта генерится целиком) */
     bossEveryDepth: 15,
+    /** Этаж гарантированной элиты (мини-босс середины похода) */
+    eliteFloor: 8,
+  },
+  /** Экономика похода (граф: 1 узел на этаж — доход подогнан под 15 этажей) */
+  trial: {
+    /** Души за обычный бой: base + depth × perDepth */
+    battleBaseSouls: 50,
+    battleSoulsPerDepth: 10,
+    /** Множитель за элитный узел */
+    eliteSoulsMult: 1.5,
+    /** Души за боссовый узел */
+    bossSouls: 300,
+    /** Души с события «Находка» (вариант денег) */
+    eventSouls: 60,
+    /** Торговец: base + depth × perDepth */
+    shopBaseCost: 40,
+    shopCostPerDepth: 6,
   },
 } as const;

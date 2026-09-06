@@ -417,6 +417,32 @@ export const CARDS: Record<string, CardDefinition> = {
     upgradePerLevel: { damage: 2 },
   },
 
+  // ---------- Проклятые карты (не играются; только через Тлен/события) ----------
+  curse_dread: {
+    id: 'curse_dread',
+    artPrompt: 'creeping shadow of dread coiling around a hollow knight helmet, cold grey tendrils, faint red glint inside, dark souls curse item art',
+    name: 'Тревога',
+    type: 'skill',
+    cost: 0,
+    rarity: 'common',
+    curse: true,
+    tags: ['dark'],
+    description: 'Проклятие. Не играется — мёртвым грузом лежит в руке до конца похода.',
+    action: {},
+  },
+  curse_tar: {
+    id: 'curse_tar',
+    artPrompt: 'blob of black cursed tar with glowing embers inside, dripping viscous ash, faint skull reflection on surface, dark souls curse item art',
+    name: 'Пепельная смола',
+    type: 'skill',
+    cost: 0,
+    rarity: 'common',
+    curse: true,
+    tags: ['dark'],
+    description: 'Проклятие. Не играется. В начале твоего хода: −2 HP за каждую копию в руке.',
+    action: {},
+  },
+
   // ---------- Карты врагов (Угольные пустоши) ----------
   enemy_slash: {
     id: 'enemy_slash',

@@ -55,6 +55,19 @@ let bgFadeTimer: ReturnType<typeof setInterval> | null = null;
 let playing = 0;
 const MAX_CONCURRENT = 8;
 
+/** Безопасный запуск: в jsdom play() не возвращает Promise. */
+function safePlay(el: HTMLAudioElement, onReject?: () => void): void {
+  const p = el.play() as unknown as Promise<void> | undefined;
+  if (p && typeof p.catch === 'function') {
+    p.catch(() => {
+      if (onReject) onReject();
+    });
+  } else if (onReject) {
+    // автоплей-политика или тестовое окружение — звук не стартанул
+    onReject();
+  }
+}
+
 /** Проиграть SFX по имени (если есть и не замьючено). */
 export function play(name: string, gain = 1): void {
   if (muted) return;
@@ -70,7 +83,7 @@ export function play(name: string, gain = 1): void {
   el.onerror = () => {
     playing -= 1;
   };
-  void el.play().catch(() => {
+  safePlay(el, () => {
     playing -= 1; // автоплей-политика: до первого клика браузер может блокировать
   });
 }
@@ -111,9 +124,7 @@ export function playBg(name: string): void {
       bgFadeTimer = null;
     }
   }, 60);
-  void el.play().catch(() => {
-    /* автоплей до первого взаимодействия — resumeBg поднимет */
-  });
+  void safePlay(el); // автоплей до первого взаимодействия — resumeBg поднимет
 }
 
 /** Восстановить BGM после разблокировки автоплея (первый клик). */

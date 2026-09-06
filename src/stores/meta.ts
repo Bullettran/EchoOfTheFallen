@@ -14,7 +14,12 @@ import { CLASSES, type ClassGift, type ClassId } from '@/data/classes';
 import type { BranchId, CardInstance, CardType, CombatStats, EnemyDefinition } from '@/types';
 
 const SAVE_SLOT = 'profile';
+const BACKUP_SLOT = 'profile-backup';
 const LS_KEY = 'eotf:profile';
+const LS_BACKUP_KEY = 'eotf:profile-backup';
+/** Каждый N-й автосейв дублируется в backup-слот (защита от битого сейва) */
+const BACKUP_EVERY = 10;
+let persistCounter = 0;
 
 /** Сериализуемая часть профиля (то, что лежит в сейве). */
 export interface ProfileData {
@@ -32,7 +37,7 @@ export interface ProfileData {
   skills: Record<BranchId, number>;
   /** Уровень дара класса (0–10): уникальная пассивка, качается в Алтаре */
   giftLevel: number;
-  stats: { battles: number; victories: number; deaths: number; enemiesSlain: number; soulsEarned: number };
+  stats: { battles: number; victories: number; deaths: number; enemiesSlain: number; soulsEarned: number; mercyPoints: number };
   lore: string[];
   /** Глубина похода: растёт с каждой победой, сбрасывается смертью */
   progress: { depth: number };
@@ -40,6 +45,8 @@ export interface ProfileData {
   tutorialDone: boolean;
   /** Звук выключен (M / кнопка) */
   audioMuted: boolean;
+  /** Быстрые анимации хода врага */
+  fastAnimations: boolean;
 }
 
 function freshProfile(classId: ClassId = 'courier'): ProfileData {
@@ -56,11 +63,12 @@ function freshProfile(classId: ClassId = 'courier'): ProfileData {
     presets: [null, null, null],
     skills: { strength: 0, dexterity: 0, intellect: 0, endurance: 0, spirit: 0, ...cls.startSkills },
     giftLevel: 0,
-    stats: { battles: 0, victories: 0, deaths: 0, enemiesSlain: 0, soulsEarned: 0 },
+    stats: { battles: 0, victories: 0, deaths: 0, enemiesSlain: 0, soulsEarned: 0, mercyPoints: 0 },
     lore: [],
     progress: { depth: 1 },
     tutorialDone: false,
     audioMuted: false,
+    fastAnimations: false,
   };
 }
 
@@ -104,16 +112,13 @@ export const useMetaStore = defineStore('meta', {
   },
 
   actions: {
-    /** Загрузка профиля при старте приложения (до mount). */
+    /** Загрузка профиля при старте приложения (до mount).
+     *  Основной сейв битый/отсутствует → пробуем резервную копию. */
     async init(): Promise<void> {
       let loaded: Partial<ProfileData> | null = null;
       try {
-        if (window.gameStorage) {
-          loaded = (await window.gameStorage.load(SAVE_SLOT)) as Partial<ProfileData> | null;
-        } else {
-          const raw = localStorage.getItem(LS_KEY);
-          loaded = raw ? (JSON.parse(raw) as Partial<ProfileData>) : null;
-        }
+        loaded = await this.loadSlot(SAVE_SLOT, LS_KEY);
+        if (!loaded) loaded = await this.loadSlot(BACKUP_SLOT, LS_BACKUP_KEY);
       } catch (e) {
         console.error('Failed to load profile, starting fresh', e);
       }
@@ -128,12 +133,25 @@ export const useMetaStore = defineStore('meta', {
       this.$subscribe(() => void this.persist());
     },
 
+    /** Слот из Electron IPC либо localStorage (браузерный dev-режим). */
+    async loadSlot(slot: string, lsKey: string): Promise<Partial<ProfileData> | null> {
+      if (window.gameStorage) {
+        return (await window.gameStorage.load(slot)) as Partial<ProfileData> | null;
+      }
+      const raw = localStorage.getItem(lsKey);
+      return raw ? (JSON.parse(raw) as Partial<ProfileData>) : null;
+    },
+
     async persist(): Promise<void> {
       try {
+        persistCounter += 1;
+        const backup = persistCounter % BACKUP_EVERY === 0;
         if (window.gameStorage) {
           await window.gameStorage.save(SAVE_SLOT, this.$state as ProfileData);
+          if (backup) await window.gameStorage.save(BACKUP_SLOT, this.$state as ProfileData);
         } else {
           localStorage.setItem(LS_KEY, JSON.stringify(this.$state));
+          if (backup) localStorage.setItem(LS_BACKUP_KEY, JSON.stringify(this.$state));
         }
       } catch (e) {
         console.error('Failed to persist profile', e);

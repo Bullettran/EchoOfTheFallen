@@ -10,7 +10,9 @@ import { useMetaStore } from '@/stores/meta';
 import { CARDS } from '@/data/cards';
 import { getCardDefinition } from '@/game/CardFactory';
 import { cardArtUrl } from '@/core/assets';
+import { play as sfx } from '@/core/audio';
 import { NODE_META, rollShrineOptions, rollCurseOption, type ShrineOption, type CurseOption } from '@/stores/trial';
+import { rollEventScenario, type EventContext, type EventScenario } from '@/data/events';
 import TrialCardInspect from '@/components/TrialCardInspect.vue';
 import type { TrialNode } from '@/types/trial';
 
@@ -27,13 +29,37 @@ const nodeLocked = computed(() => trial.currentNodeId !== null);
 const choiceFloor = computed(() => trial.choiceFloorNumber);
 
 // Состояние узла
-type PanelView = 'none' | 'campfire' | 'shop' | 'shrine' | 'curse';
+type PanelView = 'none' | 'campfire' | 'shop' | 'shrine' | 'curse' | 'event';
 const panel = ref<PanelView>('none');
 const shopItems = ref<string[]>([]);
 const selectedCardUid = ref<string | null>(null);
-// Святыня/Тлен: предложенные варианты
+// Святыня/Тлен/Находка: предложенные варианты
 const shrineOptions = ref<ShrineOption[]>([]);
 const curseOption = ref<CurseOption | null>(null);
+const eventScenario = ref<EventScenario | null>(null);
+
+/** Контекст эффектов события: замыкает сторы и колоды */
+const pushRunCard = (defId: string): void => {
+  trial.deck.push({ uid: `ev${Date.now()}${Math.random().toString(36).slice(2, 6)}`, defId, upgradeLevel: 0 });
+};
+const eventContext: EventContext = {
+  addSouls: (n) => { meta.souls += n; },
+  healHp: (n) => { trial.hp = Math.max(1, Math.min(trial.maxHp, trial.hp + n)); },
+  addMaxHp: (n) => { trial.maxHp += n; trial.hp = Math.min(trial.maxHp, trial.hp + n); },
+  addCard: pushRunCard,
+  addRandomRareCard: () => {
+    const pool = Object.values(CARDS).filter((c) => c.rarity === 'rare').map((c) => c.id);
+    if (pool.length) pushRunCard(pool[Math.floor(Math.random() * pool.length)]!);
+  },
+  addEssence: (n) => { meta.essences += n; },
+  addRunMod: (mod) => {
+    trial.runMods.startBlock += mod.startBlock ?? 0;
+    trial.runMods.cardsPerTurnBonus += mod.cardsPerTurnBonus ?? 0;
+    trial.runMods.healMultBonus += mod.healMultBonus ?? 0;
+    trial.runMods.soulsBonusPct += mod.soulsBonusPct ?? 0;
+    trial.runMods.enemyDmgBonus += mod.enemyDmgBonus ?? 0;
+  },
+};
 
 // ---- Осмотр карты: выезжающая панель характеристик ----
 const inspectUid = ref<string | null>(null);
@@ -185,14 +211,25 @@ const enterNode = (node: TrialNode) => {
       panel.value = 'curse';
       break;
     case 'event':
-      handleEvent();
+      eventScenario.value = rollEventScenario();
+      panel.value = 'event';
       break;
   }
+};
+
+/** Находка: применить выбранный вариант (узел закрывается) */
+const applyEventOption = (opt: EventScenario['options'][number]): void => {
+  opt.apply(eventContext);
+  sfx('dice', 0.7);
+  eventScenario.value = null;
+  panel.value = 'none';
+  trial.clearCurrentNode();
 };
 
 /** Святыня: взять благословение (узел закрывается) */
 const takeShrine = (opt: ShrineOption) => {
   opt.apply(trial);
+  sfx('heal', 0.9);
   panel.value = 'none';
   inspectUid.value = null;
   trial.clearCurrentNode();
@@ -207,6 +244,7 @@ const leaveShrine = () => {
 /** Тлен: принять проклятие с наградой */
 const acceptCurse = () => {
   curseOption.value?.accept(trial);
+  sfx('dice', 0.95);
   panel.value = 'none';
   trial.clearCurrentNode();
 };
@@ -217,21 +255,9 @@ const refuseCurse = () => {
   trial.clearCurrentNode();
 };
 
-const handleEvent = () => {
-  const roll = Math.random();
-  if (roll < 0.4) {
-    // Находка: чья-то реликвия в этот поход
-    trial.deck.push({ uid: `ev${Date.now()}`, defId: 'flask', upgradeLevel: 0 });
-  } else if (roll < 0.7) {
-    meta.souls += 40;
-  } else {
-    trial.hp = Math.min(trial.maxHp, trial.hp + 10);
-  }
-  trial.clearCurrentNode();
-};
-
 const doRest = () => {
   trial.rest();
+  sfx('heal', 0.8);
   panel.value = 'none';
   inspectUid.value = null;
 };
@@ -361,7 +387,10 @@ const leaveShop = () => {
     <div v-if="panel === 'shop'" class="overlay">
       <div class="overlay-panel">
         <h3>💰 Торговец пеплом</h3>
-        <p class="hint">Купленные карты действуют только в этом походе. Цена: {{ trial.shopCost() }} душ. Купил всё или ушёл — торговец исчезнет в пепле.</p>
+        <p class="hint">
+          Купленные карты действуют только в этом походе. Цена: {{ trial.shopCost() }} душ<template v-if="trial.mercyDiscountPct() > 0"> (скидка милосердия −{{ trial.mercyDiscountPct() }}%)</template>.
+          Купил всё или ушёл — торговец исчезнет в пепле.
+        </p>
         <div class="shop-items">
           <button
             v-for="defId in shopItems"
@@ -378,6 +407,45 @@ const leaveShop = () => {
           </button>
         </div>
         <button class="btn" @click="leaveShop()">Уйти</button>
+      </div>
+    </div>
+
+    <!-- ФИНАЛ: Механизм запуска нового мира (после победы над боссом) -->
+    <div v-if="trial.bossDefeated" class="overlay finale">
+      <div class="overlay-panel finale-panel">
+        <div class="ornament">✦ ──── ✦ ──── ✦</div>
+        <h2 class="finale-title">МЕХАНИЗМ ЗАПУЩЕН</h2>
+        <p class="finale-text">
+          Король-Пепел рассыпается. Ты вынимаешь его душу из трона — и слышишь, как где-то
+          под пеплом впервые за века поворачивается вал Механизма. Новый мир делает вдох.
+        </p>
+        <p class="finale-stats">
+          Поход пройден: {{ trial.depth - 1 }} узлов · собрано {{ trial.runSouls }} душ ·
+          очаг горит ярче (глубина мира: {{ meta.progress.depth }})
+        </p>
+        <p class="finale-ng">Следующий поход начнётся глубже: враги сильнее, награды щедрее.</p>
+        <button class="btn primary" @click="trial.exit()">Вернуться в Очаг</button>
+        <div class="ornament">✦ ──── ✦ ──── ✦</div>
+      </div>
+    </div>
+
+    <!-- Находка: событие с выбором -->
+    <div v-if="panel === 'event' && eventScenario" class="overlay">
+      <div class="overlay-panel">
+        <h3>{{ eventScenario.title }}</h3>
+        <p class="hint event-text">{{ eventScenario.text }}</p>
+        <div class="event-options">
+          <button
+            v-for="opt in eventScenario.options"
+            :key="opt.id"
+            class="event-option"
+            @click="applyEventOption(opt)"
+          >
+            <span class="eo-name">{{ opt.label }}</span>
+            <span class="eo-desc">{{ opt.effect }}</span>
+            <span class="eo-cta">Выбрать</span>
+          </button>
+        </div>
       </div>
     </div>
 

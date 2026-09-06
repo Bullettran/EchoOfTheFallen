@@ -75,6 +75,8 @@ export const useBattleStore = defineStore('battle', {
     trialMode: false,
     /** Смерть в походном бою уже обработана (сброс глубины) */
     deathHandled: false,
+    /** Поколение хода врага: инкремент обрывает шаги, оставшиеся от старого боя */
+    turnSeq: 0,
   }),
 
   getters: {
@@ -111,6 +113,7 @@ export const useBattleStore = defineStore('battle', {
       this.currentEnemyDefs = defs;
       this.rewarded = true; // награда через trial-store
       this.deathHandled = false;
+      this.turnSeq += 1; // шаги старого боя больше не тикают
       this.lastReward = null;
       this.trialMode = true;
       this.selectedTargetId = null;
@@ -176,10 +179,12 @@ export const useBattleStore = defineStore('battle', {
       else this.sync();
     },
 
-    /** Пошаговое исполнение плана врага с паузами под анимации. */
+    /** Пошаговое исполнение плана врага с паузами под анимации.
+     *  Поколение turnSeq обрывает цикл, если бой сменился/вышли посреди хода. */
     async runEnemyTurn(): Promise<void> {
       const engine = this.engine;
       if (!engine) return;
+      const seq = ++this.turnSeq;
       this.busy = true;
       try {
         const steps: EnemyStep[] = engine.beginEnemyTurn();
@@ -192,7 +197,8 @@ export const useBattleStore = defineStore('battle', {
           const slot = engine.enemySlots[step.enemyIndex];
           if (!slot || slot.unit.hp <= 0) continue;
 
-          await sleep(ENEMY_STEP_MS);
+          await sleep(this.enemyStepMs());
+          if (seq !== this.turnSeq) return; // бой уже неактуален
           engine.executeEnemyStep(step);
           const cardName = getCardDefinition(step.card.defId).name;
           this.pushLog(`${slot.unit.name} применяет «${cardName}»`, 'damage');
@@ -201,7 +207,8 @@ export const useBattleStore = defineStore('battle', {
         }
 
         if (engine.phase === 'enemy') {
-          await sleep(ENEMY_STEP_MS);
+          await sleep(this.enemyStepMs());
+          if (seq !== this.turnSeq) return;
           engine.finishEnemyTurn();
           this.pushLog('Ваш ход', 'info');
         }
@@ -212,9 +219,23 @@ export const useBattleStore = defineStore('battle', {
           engine.finishEnemyTurn();
         }
       } finally {
-        this.busy = false;
-        this.sync();
+        if (seq === this.turnSeq) {
+          this.busy = false;
+          this.sync();
+        }
       }
+    },
+
+    /** Длительность шага анимации хода врага (настраивается «быстрые анимации»). */
+    enemyStepMs(): number {
+      const meta = useMetaStore();
+      return meta.fastAnimations ? 320 : ENEMY_STEP_MS;
+    },
+
+    /** Оборвать анимацию хода врага (выход из боя/смена экрана). */
+    abortEnemyTurn(): void {
+      this.turnSeq += 1;
+      this.busy = false;
     },
 
     /** Пересобрать UI-снапшот из движка. */
@@ -259,7 +280,8 @@ export const useBattleStore = defineStore('battle', {
           description: def.description,
           rarity: def.rarity,
           upgradeLevel: c.upgradeLevel,
-          playable: this.isPlayerTurn && cardCost(c) <= e.energy,
+          // проклятые карты неиграбельны — портят руку мёртвым весом
+          playable: this.isPlayerTurn && !def.curse && cardCost(c) <= e.energy,
         };
       });
 
