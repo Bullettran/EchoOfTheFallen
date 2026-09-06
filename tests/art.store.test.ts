@@ -20,16 +20,16 @@ describe('assets: реестр изображений', () => {
   });
 
   it('портреты всех врагов на месте', () => {
-    for (const defId of ['fallen_soldier', 'crypt_hound', 'hollow_archer', 'grave_warden', 'ash_brigand', 'bone_king']) {
+    for (const defId of ['lost_passerby', 'rusty_dog', 'cleaner_drone', 'vending_machine', 'security_camera', 'collector']) {
       expect(enemyPortraitUrl(defId), `нет портрета: ${defId}`).toBeTruthy();
     }
   });
 
   it('иконки всех состояний и фоны всех сцен', () => {
-    for (const type of ['burn', 'poison', 'bleed', 'blessing', 'fury', 'vulnerable']) {
+    for (const type of ['burn', 'poison', 'bleed', 'blessing', 'fury', 'vulnerable', 'heal_ban']) {
       expect(conditionIconUrl(type), `нет иконки: ${type}`).toBeTruthy();
     }
-    const scenes: SceneId[] = ['battle_crypt', 'battle_ruins', 'battle_shrine', 'boss_throne', 'hub_scene'];
+    const scenes: SceneId[] = ['station', 'ash_wastes_path', 'ash_tract', 'ruined_cathedral', 'catacombs', 'shattered_rampart', 'burned_village', 'throne_room'];
     for (const scene of scenes) {
       expect(sceneUrl(scene), `нет сцены: ${scene}`).toBeTruthy();
     }
@@ -54,7 +54,7 @@ describe('assets: реестр изображений', () => {
   it('art-store делегирует реестру', () => {
     const art = useArtStore();
     expect(art.artUrl('card', 'strike')).toBeTruthy();
-    expect(art.artUrl('enemy', 'bone_king')).toBeTruthy();
+    expect(art.artUrl('enemy', 'collector')).toBeTruthy();
     expect(art.artUrl('card', 'missing')).toBeNull();
   });
 });

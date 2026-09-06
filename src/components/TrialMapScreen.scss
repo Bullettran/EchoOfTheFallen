@@ -1,0 +1,239 @@
+.trial-screen {
+  width: 1280px; height: 720px; margin: 0 auto;
+  display: flex; flex-direction: column;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(140, 90, 60, 0.14) 0%, transparent 55%),
+    linear-gradient(180deg, #14100e 0%, #070506 80%);
+  padding: 16px 28px;
+}
+
+/* ---------- Подсказки (тултипы) ---------- */
+.tip-host { position: relative; }
+.tip {
+  position: absolute; top: calc(100% + 12px); left: -40%;
+  width: 250px; padding: 10px 12px;
+  background: #17110d; border: 1px solid #5a4326; border-radius: 8px;
+  color: var(--text); font-size: 12.5px; line-height: 1.45; text-align: left;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+  opacity: 0; pointer-events: none; transition: opacity 0.15s; z-index: 80;
+}
+.tip-host:hover .tip { opacity: 1; }
+/* В шапке тултип раскрывается вниз, но НЕ по центру — чуть левее,
+   чтобы не накрывать подсказку выбора узла */
+.trial-header .tip { bottom: auto; top: calc(100% + 10px); transform: none; left: 0; width: 230px; }
+
+/* ---------- Шапка ---------- */
+.trial-header {
+  display: flex; justify-content: space-between; align-items: center; gap: 18px;
+  padding-bottom: 12px; border-bottom: 1px solid var(--border-soft);
+}
+.floor-label {
+  font-family: var(--font-serif); font-size: 24px; color: var(--soul); letter-spacing: 3px;
+  min-width: 140px;
+}
+.hp-bar {
+  width: 300px; height: 22px; background: #1d1015; border: 1px solid #59313a;
+  border-radius: 5px; overflow: visible; position: relative;
+}
+.hp-fill {
+  height: 100%; background: linear-gradient(90deg, #6e1420, #c22736);
+  transition: width 0.3s; border-radius: 4px;
+}
+.hp-text {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-serif); font-size: 14px; color: var(--text-bright);
+  text-shadow: 0 1px 2px #000;
+}
+.resources { display: flex; gap: 14px; align-items: center; }
+.souls { color: var(--gold-bright); font-size: 18px; }
+.btn-exit {
+  font-size: 14px; padding: 6px 14px; background: transparent;
+  color: var(--faint); border: 1px solid var(--border-soft); border-radius: 6px; cursor: pointer;
+}
+.btn-exit:hover { color: var(--blood-bright); border-color: var(--blood); }
+
+/* ---------- Карта похода (граф с тропами) ---------- */
+.floor-map { flex: 1; display: flex; flex-direction: column; min-height: 0; padding-top: 6px; }
+
+.map-scroll {
+  flex: 1; overflow-y: auto; min-height: 0;
+  scrollbar-width: thin; scrollbar-color: #4a3826 transparent;
+}
+.map-inner { position: relative; padding: 14px 20px 26px; }
+
+/* Тропы-рёбра */
+.map-edges { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.map-edges line {
+  stroke: rgba(160, 120, 70, 0.22); stroke-width: 2;
+}
+.map-edges line.walked {
+  stroke: rgba(255, 215, 122, 0.85); stroke-width: 3;
+  filter: drop-shadow(0 0 4px rgba(255, 215, 122, 0.4));
+}
+.map-edges line.ahead {
+  stroke: rgba(255, 215, 122, 0.55); stroke-width: 2.5;
+  stroke-dasharray: 6 5;
+  animation: trail-pulse 1.6s ease-in-out infinite;
+}
+@keyframes trail-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+.floor-row {
+  position: relative;
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  padding: 9px 0; flex: none;
+}
+.row-num {
+  position: absolute; left: 0;
+  font-family: var(--font-serif); font-size: 13px; color: var(--faint);
+  width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-soft); border-radius: 50%;
+  background: rgba(16, 12, 10, 0.85); z-index: 1;
+}
+
+/* Будущие этажи — тень (но видны, карта целиком) */
+.floor-row.future { opacity: 0.45; }
+.floor-row.future .node { cursor: default; }
+/* Пройденные этажи — тают (без transform: масштаб ломает точность троп SVG) */
+.floor-row.past { opacity: 0.55; }
+.floor-row.past .node { cursor: default; }
+/* Текущий выбор — в свете очага */
+.floor-row.current .row-num {
+  color: var(--gold-bright); border-color: var(--gold); box-shadow: 0 0 12px rgba(220, 170, 90, 0.35);
+}
+.floor-row.bossrow .row-num { border-color: var(--arcane); color: #e8d4ff; }
+
+/* Узлы распределяются по дорожкам: ширина ряда делится поровну */
+.nodes {
+  display: flex; justify-content: center; gap: 26px;
+  max-width: 900px; width: 76%;
+}
+
+.node {
+  position: relative; width: 138px; padding: 14px 10px;
+  background: linear-gradient(180deg, rgba(30, 23, 18, 0.92), rgba(15, 11, 9, 0.95));
+  border: 2px solid var(--border); border-radius: 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  cursor: default; transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s, opacity 0.2s;
+  z-index: 1;
+}
+/* Доступный узел: живой, золотая пульсация */
+.node.reachable {
+  cursor: pointer;
+  border-color: #8a6a3a;
+  animation: node-glow 2.2s ease-in-out infinite;
+}
+.node.reachable:hover {
+  transform: translateY(-5px); border-color: var(--gold);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+}
+.node.reachable:hover .tip { opacity: 1; }
+@keyframes node-glow {
+  0%, 100% { box-shadow: 0 0 6px rgba(255, 215, 122, 0.12); }
+  50% { box-shadow: 0 0 18px rgba(255, 215, 122, 0.3); }
+}
+.node.cleared { opacity: 0.4; filter: grayscale(0.7); }
+.node:disabled:not(.reachable) { opacity: 0.85; }
+.floor-row.future .node { opacity: 0.6; }
+.node-icon { font-size: 30px; }
+.node-label { font-family: var(--font-serif); font-size: 13.5px; color: var(--text-bright); text-align: center; }
+.cleared-mark { position: absolute; top: 8px; right: 10px; color: #7dd87d; font-size: 16px; }
+
+.node.elite { border-color: #6a3a2f; }
+.node.reachable.elite { border-color: #a3543f; }
+.node.boss { border-color: #4a2a6a; width: 170px; padding: 18px 12px; }
+.node.boss.reachable { border-color: var(--arcane); animation: node-glow 2.2s ease-in-out infinite; }
+.node.campfire { border-color: #6a5a2a; }
+.node.shop { border-color: #2a5a4a; }
+
+/* ---------- Подвал ---------- */
+/* Подсказка хода живёт в футере: тултипы шапки (HP/души) раскрываются
+   вниз и больше ничто не перекрывают её */
+.trial-footer { padding-top: 10px; border-top: 1px solid var(--border-soft); }
+.floor-hint {
+  font-size: 14px; color: var(--dim); font-style: italic;
+  text-align: left; padding: 0 4px 6px;
+}
+.deck-info summary { cursor: pointer; color: var(--dim); font-size: 14px; }
+.deck-list { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 0; }
+.deck-card {
+  font-size: 11px; color: var(--text); background: rgba(20, 16, 26, 0.8);
+  border: 1px solid var(--border-soft); border-radius: 4px; padding: 2px 6px;
+  cursor: pointer;
+}
+.deck-card:hover { border-color: var(--gold); color: var(--gold-bright); }
+.mini-card.picked { border-color: var(--gold); color: #ffe9b0; box-shadow: 0 0 10px rgba(255, 215, 122, 0.25); }
+
+/* ---------- Оверлеи (костёр / торговец) ---------- */
+.overlay {
+  position: fixed; inset: 0; z-index: 40;
+  background: rgba(3, 2, 5, 0.8);
+  display: flex; align-items: center; justify-content: center;
+}
+.overlay-panel {
+  width: 560px; padding: 28px 32px;
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--border); border-radius: 14px;
+  text-align: center; box-shadow: var(--shadow-panel);
+}
+.overlay-panel h3 { font-size: 24px; color: var(--text-bright); margin-bottom: 12px; }
+.hint { font-size: 14px; color: var(--dim); margin-bottom: 18px; line-height: 1.45; }
+.actions { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.btn {
+  font-family: var(--font-serif); font-size: 16px; padding: 10px 28px;
+  background: #241b16; color: var(--gold-bright);
+  border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+}
+.btn:hover { border-color: var(--gold); }
+.btn.primary { border-color: var(--gold); color: #ffe9b0; }
+.card-select p { font-size: 13px; color: var(--dim); margin-bottom: 8px; }
+.mini-cards { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 460px; }
+.mini-card {
+  font-size: 12px; padding: 5px 10px;
+  background: rgba(20, 16, 26, 0.9); color: var(--text);
+  border: 1px solid var(--border-soft); border-radius: 6px; cursor: pointer;
+}
+.mini-card:hover { border-color: var(--gold); }
+
+.shop-items { display: flex; gap: 14px; margin-bottom: 18px; justify-content: center; }
+
+/* Святыня / Тлен: карточки вариантов */
+.event-options { display: flex; gap: 14px; margin: 6px 0 18px; justify-content: center; }
+.event-options.single { justify-content: center; }
+.event-option {
+  width: 220px; padding: 16px 14px;
+  background: linear-gradient(180deg, #221a10, #14101a);
+  border: 2px solid #6a5a2a; border-radius: 12px;
+  display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center;
+  cursor: pointer; transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.event-option:hover:not(.curse) {
+  transform: translateY(-4px); border-color: var(--gold);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+}
+.event-option.curse { border-color: #5a2a2a; cursor: default; }
+.eo-name { font-family: var(--font-serif); font-size: 16.5px; color: var(--gold-bright); }
+.event-option.curse .eo-name { color: #ff8a7a; }
+.eo-desc { font-size: 13px; color: var(--dim); line-height: 1.4; }
+.eo-cta { font-size: 12.5px; color: #7dd87d; letter-spacing: 1px; text-transform: uppercase; }
+.row-btns { display: flex; gap: 12px; justify-content: center; }
+.shop-card {
+  width: 150px; padding: 10px;
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 2px solid var(--border); border-radius: 10px;
+  cursor: pointer; transition: border-color 0.15s;
+  display: flex; flex-direction: column; gap: 6px; align-items: center;
+}
+.shop-card:hover:not(:disabled) { border-color: var(--gold); }
+.shop-card:disabled { opacity: 0.4; cursor: not-allowed; }
+.sc-art {
+  width: 110px; height: 110px; border-radius: 8px; overflow: hidden;
+  border: 1px solid var(--border-soft);
+  background: #171223;
+  display: flex; align-items: center; justify-content: center;
+}
+.sc-art img { width: 100%; height: 100%; object-fit: cover; }
+.sc-name { font-family: var(--font-serif); font-size: 15px; color: var(--text-bright); text-align: center; }
+.sc-desc { font-size: 12px; color: var(--dim); line-height: 1.3; text-align: center; }

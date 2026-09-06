@@ -5,7 +5,7 @@
 import { BattleEngine } from '@/game/BattleEngine';
 import { createCard } from '@/game/CardFactory';
 import { DEFAULT_COMBAT_STATS } from '@/data/skills';
-import type { CombatStats, EnemyDefinition } from '@/types';
+import type { CombatStats, EnemyDefinition, GiftConfig } from '@/types';
 
 export const dummyEnemy: EnemyDefinition = {
   id: 'dummy',
@@ -25,6 +25,7 @@ export function makeEngine(
   stats: Partial<CombatStats> = {},
   enemies: EnemyDefinition | EnemyDefinition[] = dummyEnemy,
   enemyDmgBonus = 0,
+  gift?: GiftConfig,
 ): BattleEngine {
   return new BattleEngine(
     70,
@@ -32,6 +33,7 @@ export function makeEngine(
     enemies,
     { ...DEFAULT_COMBAT_STATS, ...stats },
     enemyDmgBonus,
+    gift,
   );
 }
 

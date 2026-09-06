@@ -14,7 +14,7 @@
 import { BALANCE } from '@/core/config';
 import { eventBus } from '@/core/EventBus';
 import { createCard, cardCost, resolveCardAction, getCardDefinition } from '@/game/CardFactory';
-import { buildIntent, decide } from '@/game/EnemyAI';
+import { buildPlanIntent, decide } from '@/game/EnemyAI';
 import { DEFAULT_COMBAT_STATS } from '@/data/skills';
 import { STATES, type StateContext } from '@/data/states';
 import type {
@@ -24,6 +24,7 @@ import type {
   CombatStats,
   EnemyDefinition,
   EnemyIntent,
+  GiftConfig,
   StateInstance,
   StateType,
   Tag,
@@ -53,6 +54,8 @@ export interface EnemySlot {
   mercyAnnounced?: boolean;
   /** Бонус смерти союзникам уже применён */
   deathHandled?: boolean;
+  /** Жатва душ за эту смерть уже начислена */
+  harvestDone?: boolean;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -86,17 +89,23 @@ export class BattleEngine {
   /** Расход «Несокрушимости» (раз в бой) */
   private lethalSaveUsed = false;
 
+  /** Дар класса (уникальная пассивка): Шипы / Наконечник / Жатва душ */
+  private readonly gift: GiftConfig | undefined;
+  /** Наконечник: бонус первой атаки уже израсходован в этом ходу */
+  private firstStrikeUsed = false;
+
   constructor(
     playerBaseHp: number,
     playerDeck: CardInstance[],
     enemyDefs: EnemyDefinition | EnemyDefinition[],
     stats: CombatStats = DEFAULT_COMBAT_STATS,
     enemyDmgBonus = 0,
+    gift?: GiftConfig,
   ) {
     const maxHp = playerBaseHp + stats.maxHpBonus;
     this.player = {
       id: 'player',
-      name: 'Павший',
+      name: 'Пепельный',
       side: 'player',
       hp: maxHp,
       maxHp,
@@ -105,6 +114,7 @@ export class BattleEngine {
     };
     this.stats = stats;
     this.enemyDmgBonus = enemyDmgBonus;
+    this.gift = gift && gift.level > 0 ? gift : undefined;
     for (const def of Array.isArray(enemyDefs) ? enemyDefs : [enemyDefs]) {
       this.enemySlots.push(this.makeSlot(def, this.enemyDmgBonus));
     }
@@ -206,7 +216,19 @@ export class BattleEngine {
     this.hand.splice(idx, 1);
     const cardDef = getCardDefinition(card.defId);
     const attackTag = cardDef.tags[0]; // тег канала урона — для резистов
-    this.resolveAction(this.player, target, resolveCardAction(card), attackTag);
+    let act = resolveCardAction(card);
+    // Дар Странника «Наконечник»: первая атака хода бьёт сильнее
+    if (
+      cardDef.type === 'attack' &&
+      this.gift?.id === 'first_strike' &&
+      !this.firstStrikeUsed &&
+      (act.damage ?? 0) > 0
+    ) {
+      this.firstStrikeUsed = true;
+      act = { ...act, damage: (act.damage ?? 0) + this.gift.level };
+      eventBus.emit('log:message', { text: `Наконечник: +${this.gift.level} урона`, kind: 'state' });
+    }
+    this.resolveAction(this.player, target, act, attackTag);
     eventBus.emit('vfx:cardPlayed', { cardDefId: card.defId, targetId: target.id });
     this.discardPile.push(card);
     this.checkDeath();
@@ -261,6 +283,7 @@ export class BattleEngine {
       // План слота: играем, пока ИИ хочет и есть энергия (2)
       let energy = 2;
       const slotIndex = this.enemySlots.indexOf(slot);
+      const picked: CardInstance[] = [];
       for (let i = 0; i < 10; i++) {
         const choice = decide(slot.def.aiStyle, {
           self: slot.unit,
@@ -271,8 +294,15 @@ export class BattleEngine {
         if (!choice) break;
         energy -= cardCost(choice);
         slot.hand = slot.hand.filter((c) => c.uid !== choice.uid);
+        picked.push(choice);
         plan.push({ kind: 'playCard', enemyIndex: slotIndex, card: choice });
       }
+      // Точное намерение из реального плана (превью могло drift'уть):
+      // модификаторы — текущие состояния (Ярость врага / Пробитая броня игрока)
+      slot.intent = buildPlanIntent(picked, slot.dmgBonus, {
+        attackerHasFury: this.hasState(slot.unit, 'fury'),
+        targetHasVulnerable: this.hasState(this.player, 'vulnerable'),
+      });
     }
     plan.push({ kind: 'pass' });
     return plan;
@@ -347,6 +377,7 @@ export class BattleEngine {
     this.phase = 'player';
     this.player.block = 0;
     this.energy = BALANCE.player.energyPerTurn + this.stats.energyPerTurnBonus;
+    this.firstStrikeUsed = false;
     const cardsPerTurn = BALANCE.player.cardsPerTurn + this.stats.cardsPerTurnBonus;
 
     // Добор руки ДО cardsPerTurn (несыгранные карты сохраняются для комбинаций)
@@ -363,17 +394,48 @@ export class BattleEngine {
 
     eventBus.emit('turn:playerStart', { turn: this.turn });
 
-    // Намерения: превью по картам, которые слот реально возьмёт
+    // Намерения: полное превью плана (все карты хода) без мутации слота.
+    // Пробитая броня игрока учитывается, только если доживёт до хода врага
+    // (её длительность тикнет в конце ХОДА ИГРОКА — до хода врага).
     for (const slot of this.aliveSlots) {
-      const probeHand = slot.hand.length > 0 ? slot.hand : slot.drawPile.slice(-3);
-      const probe = decide(slot.def.aiStyle, {
+      const vuln = this.player.states.find((s) => s.type === 'vulnerable');
+      const vulnAlive = vuln ? vuln.duration === null || vuln.duration > 1 : false;
+      slot.intent = buildPlanIntent(this.previewPlan(slot), slot.dmgBonus, {
+        attackerHasFury: this.hasState(slot.unit, 'fury'),
+        targetHasVulnerable: vulnAlive,
+      });
+    }
+  }
+
+  /**
+   * Симуляция плана слота на его следующий ход (без мутации руки/колоды):
+   * тот же добор до 3 карт и тот же цикл decide(), что в beginEnemyTurn().
+   */
+  private previewPlan(slot: EnemySlot): CardInstance[] {
+    const simHand = [...slot.hand];
+    const simDraw = [...slot.drawPile];
+    while (simHand.length < 3) {
+      if (simDraw.length === 0) break; // реальный ход сделает решаффл — превью обрываем
+      const card = simDraw.pop();
+      if (!card) break;
+      simHand.push(card);
+    }
+    let energy = 2;
+    const picked: CardInstance[] = [];
+    for (let i = 0; i < 10; i++) {
+      const choice = decide(slot.def.aiStyle, {
         self: slot.unit,
         player: this.player,
-        hand: probeHand,
-        energy: 2,
+        hand: simHand,
+        energy,
       });
-      slot.intent = buildIntent(probe);
+      if (!choice) break;
+      energy -= cardCost(choice);
+      picked.push(choice);
+      const idx = simHand.findIndex((c) => c.uid === choice.uid);
+      if (idx >= 0) simHand.splice(idx, 1);
     }
+    return picked;
   }
 
   /** Исполнить действие карты. @param attackTag тег канала урона (для резистов) */
@@ -433,7 +495,7 @@ export class BattleEngine {
     }
   }
 
-  /** Атака: бонусы Силы, Ярость атакующего, Уязвимость цели, Кровотечение. */
+  /** Атака: бонусы Мощи, Ярость атакующего, Пробитая броня цели, Кровотечение. */
   private dealAttackDamage(
     attacker: Combatant,
     target: Combatant,
@@ -479,6 +541,18 @@ export class BattleEngine {
     if (bleed) STATES.bleed.onHolderAttack?.(attacker, bleed, this.stateCtx());
 
     this.applyDamage(target, Math.floor(dmg), pierceBlock);
+
+    // Дар Рыцаря «Шипы»: удар по игроку обжигает атакующего (сквозь блок)
+    if (
+      target.side === 'player' &&
+      attacker.side === 'enemy' &&
+      this.gift?.id === 'thorns' &&
+      attacker.hp > 0
+    ) {
+      const thorns = this.gift.level;
+      eventBus.emit('log:message', { text: `Шипы: ${attacker.name} −${thorns} HP`, kind: 'state' });
+      this.dealStateDamage(attacker, thorns); // игнорирует блок по определению
+    }
   }
 
   /** Снять у носителя N состояний заданной полярности («Свеча памяти»/«Корона»). */
@@ -656,7 +730,17 @@ export class BattleEngine {
   /** Возвращает true, если бой закончился. Победа — все враги мертвы;
    *  если хоть один пощадён вместо убийства — исход 'spared'. */
   private checkDeath(): boolean {
-    // Смерть врага бафает выживших («Осада теней»: +1 урон за павшего)
+    // Дар Жреца «Жатва душ»: смерть врага затягивает раны сосуда (раз за врага)
+    if (this.gift?.id === 'soul_harvest') {
+      for (const slot of this.enemySlots) {
+        if (slot.unit.hp <= 0 && !slot.harvestDone) {
+          slot.harvestDone = true;
+          this.heal(this.player, this.gift.level); // уважает Порчу (heal_ban)
+          eventBus.emit('log:message', { text: `Жатва душ: +${this.gift.level} HP`, kind: 'heal' });
+        }
+      }
+    }
+    // Смерть врага бафает выживших («Рой мусорщиков»: +1 урон за павшего)
     for (const slot of this.enemySlots) {
       if (slot.deathHandled) continue;
       if (slot.unit.hp <= 0 && slot.def.allyDeathBonus) {

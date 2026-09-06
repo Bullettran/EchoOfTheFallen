@@ -1,12 +1,13 @@
 <script setup lang="ts">
 /**
- * Алтарь душ: дерево навыков — 5 ветвей по 10 уровней.
- * Узел 5 — спецнавык (золотая рамка), 10 — ульта (фиолетовая).
+ * Алтарь: дар класса (уникальная пассивка, 0–10) + дерево навыков —
+ * 5 ветвей по 10 уровней. Узел 5 — спецнавык (золотая рамка), 10 — ульта (фиолетовая).
  * Клик по узлу: выбор для описания; кнопка изучает следующий уровень ветви.
  */
 import { computed, ref } from 'vue';
 import { useMetaStore, SKILL_BRANCHES } from '@/stores/meta';
 import { nextNode } from '@/data/skills';
+import { CLASSES } from '@/data/classes';
 import type { BranchId } from '@/types';
 
 const meta = useMetaStore();
@@ -16,6 +17,9 @@ const branch = computed(() => SKILL_BRANCHES.find((b) => b.id === activeBranch.v
 const level = computed(() => meta.skills[activeBranch.value]);
 const next = computed(() => nextNode(activeBranch.value, level.value));
 const canLearn = computed(() => Boolean(next.value) && meta.souls >= (next.value?.cost ?? Infinity));
+
+const gift = computed(() => CLASSES[meta.classId].gift);
+const canLearnGift = computed(() => meta.giftLevel < 10 && meta.souls >= meta.giftCost);
 
 const switchBranch = (id: BranchId): void => {
   activeBranch.value = id;
@@ -34,6 +38,21 @@ const learn = (): void => {
 
 <template>
   <div class="altar">
+    <section class="gift">
+      <div class="gift-info">
+        <span class="g-icon">{{ gift.icon }}</span>
+        <div class="g-text">
+          <span class="g-name">{{ gift.name }} <em class="g-class">· дар {{ CLASSES[meta.classId].name }}а</em></span>
+          <span class="g-desc">{{ gift.describe(Math.max(meta.giftLevel, 1)) }}</span>
+          <span class="g-level">Уровень: {{ meta.giftLevel }}/10</span>
+        </div>
+      </div>
+      <button v-if="meta.giftLevel < 10" :disabled="!canLearnGift" @click="meta.learnGift()">
+        {{ meta.giftLevel === 0 ? 'Пробудить дар' : 'Усилить дар' }} — {{ meta.giftCost }} душ
+      </button>
+      <span v-else class="g-max">Дар пробуждён полностью</span>
+    </section>
+
     <div class="branches">
       <button
         v-for="b in SKILL_BRANCHES"

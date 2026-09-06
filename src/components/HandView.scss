@@ -21,19 +21,25 @@
   animation: rise-in 0.3s ease-out backwards;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
 }
+/* Рамка card_frame через border-image: орнаментальные края рамки натягиваются
+   вокруг карты, окно арта фиксировано и картинка видна ЦЕЛИКОМ (contain) */
 .card.framed {
-  border-color: transparent;
-  padding: 0 8px 6px;
+  border: 10px solid transparent;
+  border-image-slice: 82;
+  border-image-width: 10px;
+  border-image-repeat: stretch;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #1b1512 0%, #0e0a08 100%);
+  padding: 16px 7px 6px;
 }
-/* Рамка: светлый орнамент вверху (~18%), тёмный низ — окно арта под шапкой,
-   текст в тёмной зоне. Запас на 3 строки имени: текст с 112px при карте 180px */
+.card.framed .name { font-size: 13.5px; line-height: 1.05; }
+.card.framed .type { font-size: 9.5px; }
 .card.framed .art {
-  position: absolute; top: 24px; left: 10px; right: 10px; height: 84px;
-  margin: 0; border: none; border-radius: 6px;
+  flex: none; height: 84px; margin: 2px 0 0;
+  border: 1px solid rgba(0, 0, 0, 0.7);
+  background: #0a0806;
 }
-.card.framed .name { margin-top: 114px; font-size: 14px; line-height: 1.08; }
-.card.framed .type { font-size: 10px; }
-.card.framed .hotkey { top: 6px; right: 8px; font-size: 11px; }
+.card.framed .art img { width: auto; max-width: 100%; object-fit: contain; filter: saturate(0.95) contrast(1.03); }
 .card:hover {
   transform: rotate(0deg) translateY(-30px) scale(1.07);
   z-index: 99 !important;

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Статуя воспоминаний: статистика и фрагменты истории (лор).
+ * Зал Эха: статистика и эхо павших героев (лор).
  */
 import { useMetaStore } from '@/stores/meta';
 import { LORE } from '@/data/lore';
@@ -35,7 +35,7 @@ const statRows: { label: string; value: () => number }[] = [
       >
         <h4>{{ meta.lore.includes(frag.id) ? frag.title : '· · ·' }}</h4>
         <p v-if="meta.lore.includes(frag.id)">{{ frag.text }}</p>
-        <p v-else class="sealed">Память запечатана. Сражайтесь, чтобы вспомнить.</p>
+        <p v-else class="sealed">Эхо умолкло. Собирайте души, чтобы вспомнить.</p>
       </div>
     </div>
   </div>

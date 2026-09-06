@@ -1,252 +1,132 @@
 /**
- * Реестр врагов: 5 обычных + 1 босс. Все данные декларативные —
- * скейлинг по глубине применяет EnemyFactory, здесь только базовые значения.
+ * Реестр врагов Угольных пустошей: обычные, элитные, миньоны и босс.
+ * Все данные декларативные — скейлинг по глубине применяет EnemyFactory,
+ * здесь только базовые значения. Числа перенесены со старого ростера 1:1.
  */
 import type { EnemyDefinition } from '@/types';
 
 export const ENEMIES: Record<string, EnemyDefinition> = {
-  fallen_soldier: {
-    id: 'fallen_soldier',
-    name: 'Павший солдат',
-    scene: 'battle_crypt',
+  // ---------- Обычные ----------
+  lost_passerby: {
+    id: 'lost_passerby',
+    name: 'Пустотелый',
+    scene: 'ash_wastes_path',
     maxHp: 44,
     level: 1,
     aiStyle: 'aggressive',
     deck: ['enemy_slash', 'enemy_slash', 'enemy_crush', 'enemy_guard', 'enemy_hex'],
     soulsDrop: 60,
     essenceChance: 0.3,
-    artPrompt: 'fallen hollow soldier, dark souls style, tattered armor, glowing eyes, dark fantasy',
+    artPrompt: 'hunched hollow wretch with cracked ashen skin and faint empty eyes, wrapped in tattered burial cloth, shuffling lost pose, one claw reaching forward',
   },
-  crypt_hound: {
-    id: 'crypt_hound',
-    name: 'Склеповый гончий',
-    scene: 'battle_crypt',
+  rusty_dog: {
+    id: 'rusty_dog',
+    name: 'Гниющий пёс',
+    scene: 'ash_wastes_path',
     maxHp: 36,
     level: 1,
     aiStyle: 'aggressive',
     deck: ['enemy_bleed_bite', 'enemy_bleed_bite', 'enemy_slash', 'enemy_crush'],
     soulsDrop: 55,
     essenceChance: 0.25,
-    artPrompt: 'undead hound, exposed ribs, spectral flames, dark crypt, dark fantasy',
+    artPrompt: 'feral rotting hound with mangy hide and exposed ribs, jaw split open mid-snarl, embers drifting in fog behind, crouched low ready to pounce',
   },
-  hollow_archer: {
-    id: 'hollow_archer',
-    name: 'Пустотелый лучник',
-    scene: 'battle_shrine',
+  cleaner_drone: {
+    id: 'cleaner_drone',
+    name: 'Могильщик',
+    scene: 'ash_tract',
     maxHp: 38,
     level: 2,
     aiStyle: 'defensive',
     deck: ['enemy_poison_arrow', 'enemy_poison_arrow', 'enemy_guard', 'enemy_guard', 'enemy_slash'],
     soulsDrop: 65,
     essenceChance: 0.3,
-    artPrompt: 'hollow archer, ragged hood, bone bow, poisoned arrows, dark fantasy',
+    artPrompt: 'hunched gravedigger wretch in a bone plague mask, rusted shovel raised defensively, hanging lantern glowing sickly green',
   },
-  grave_warden: {
-    id: 'grave_warden',
-    name: 'Смотритель могил',
-    scene: 'battle_shrine',
+  vending_machine: {
+    id: 'vending_machine',
+    name: 'Одержимый жрец',
+    scene: 'ruined_cathedral',
     maxHp: 53,
     level: 2,
     aiStyle: 'tactical',
     deck: ['enemy_smite', 'enemy_smite', 'enemy_mend', 'enemy_hex', 'enemy_guard'],
     soulsDrop: 80,
     essenceChance: 0.35,
-    artPrompt: 'grave warden with lantern, ancient robes, cemetery keeper, dark fantasy',
+    resistances: { poison: 0.5 },
+    artPrompt: 'fanatic ash-cult priest with robes fused into charcoal skin, clutching a smoldering censer on a chain, wild burning eyes, hurling curse fire',
   },
-  ash_brigand: {
-    id: 'ash_brigand',
-    name: 'Пепельный разбойник',
-    scene: 'battle_ruins',
+  security_camera: {
+    id: 'security_camera',
+    name: 'Пепельный ворон',
+    scene: 'shattered_rampart',
     maxHp: 48,
     level: 3,
     aiStyle: 'balanced',
     deck: ['enemy_slash', 'enemy_smite', 'enemy_warcry', 'enemy_guard', 'enemy_guard'],
     soulsDrop: 70,
     essenceChance: 0.3,
-    artPrompt: 'ash-covered bandit, cracked mask, twin blades, cinder wasteland, dark fantasy',
+    artPrompt: 'giant ash-feathered crow with embers for eyes, wings half-spread on a broken rampart, tilted hostile gaze, grey ash falling',
   },
-  ash_echo: {
-    id: 'ash_echo',
-    name: 'Пепельный отголосок',
-    maxHp: 22,
-    level: 1,
-    aiStyle: 'balanced',
-    scene: 'battle_crypt',
-    deck: ['echo_strike', 'echo_memory', 'echo_strike', 'echo_memory'],
-    soulsDrop: 30,
-    essenceChance: 0.2,
-    artPrompt: 'half-transparent burnt ghost of a fallen warden, ashen echo, dark souls style',
-  },
-  gate_trial: {
-    id: 'gate_trial',
-    name: 'Испытание Привратника',
-    maxHp: 38,
-    level: 2,
-    aiStyle: 'defensive',
-    scene: 'battle_crypt',
-    deck: ['enemy_guard', 'gate_counter', 'enemy_guard', 'gate_counter', 'enemy_guard'],
-    soulsDrop: 40,
-    essenceChance: 0.25,
-    artPrompt: 'gatekeeper trial armor covered in ash, shield and spear, dark souls style',
-  },
-  fire_golem: {
-    id: 'fire_golem',
-    name: 'Огненный голем',
-    maxHp: 52,
-    level: 2,
-    aiStyle: 'defensive',
-    scene: 'battle_shrine',
-    deck: ['enemy_guard', 'golem_smash', 'enemy_guard', 'golem_smash'],
-    soulsDrop: 60,
-    essenceChance: 0.4,
-    boss: {
-      phases: [
-        { name: 'Страж книги', hpThresholdPct: 100 },
-        { name: 'Тлеющий гнев', hpThresholdPct: 30, onEnter: { heal: 10 } },
-      ],
-    },
-    artPrompt: 'fire golem made of burning books and stone, library guardian, dark souls style',
-  },
-  hammer_trial: {
-    id: 'hammer_trial',
-    name: 'Испытание молота',
-    maxHp: 46,
-    level: 2,
-    aiStyle: 'balanced',
-    scene: 'battle_ruins',
-    deck: ['enemy_guard', 'hammer_smash', 'enemy_guard', 'hammer_smash'],
-    soulsDrop: 55,
-    essenceChance: 0.3,
-    artPrompt: 'forge ghost with giant hammer, sparks and ash, dark souls style',
-  },
-  sisters_shadow: {
-    id: 'sisters_shadow',
-    name: 'Тень сестры',
+
+  // ---------- Элитные ----------
+  laundry_unit: {
+    id: 'laundry_unit',
+    name: 'Рыцарь-отступник',
     maxHp: 60,
     level: 3,
     aiStyle: 'defensive',
-    scene: 'battle_shrine',
+    scene: 'burned_village',
     deck: ['mirror_slash', 'enemy_guard', 'mirror_slash', 'enemy_hex'],
     soulsDrop: 70,
     essenceChance: 0.4,
+    artPrompt: 'renegade knight in mismatched scorched armor pieces rising from a knee, twin notched blades, defiant guarded stance, burning village behind',
+  },
+  lost_courier: {
+    id: 'lost_courier',
+    name: 'Павший странник',
+    maxHp: 46,
+    level: 2,
+    aiStyle: 'balanced',
+    scene: 'catacombs',
+    deck: ['echo_strike', 'echo_memory', 'echo_strike', 'echo_memory', 'enemy_slash'],
+    soulsDrop: 55,
+    essenceChance: 0.3,
     mercy: { hpPct: 20 },
-    artPrompt: 'shadow of a grieving woman by the well, mirrored silhouette, dark souls style',
+    artPrompt: 'dying hooded wanderer dragging a torn travel cloak, worn sword used as a crutch, faint soul-light flickering in the chest, limping desperate pose',
   },
-  gate_shadow: {
-    id: 'gate_shadow',
-    name: 'Привратник, что стал Тенью',
-    maxHp: 130,
-    level: 5,
-    aiStyle: 'aggressive',
-    scene: 'boss_throne',
-    deck: [
-      'boss_spear', 'boss_circle', 'boss_breath', 'boss_dash',
-      'boss_blast', 'boss_last_strike', 'boss_curse',
-    ],
-    soulsDrop: 200,
-    essenceChance: 1.0,
-    boss: {
-      phases: [
-        { name: 'Копьё и щит', hpThresholdPct: 100 },
-        {
-          name: 'Тени',
-          hpThresholdPct: 40,
-          summon: { defId: 'shadow_minion', name: 'Тень', hp: 15, count: 2, deck: ['shadow_hit'] },
-        },
-      ],
-    },
-    artPrompt: 'gatekeeper consumed by shadow, blackened armor, green flame eyes, dark souls boss',
+  welder_bot: {
+    id: 'welder_bot',
+    name: 'Обугленный латник',
+    maxHp: 52,
+    level: 2,
+    aiStyle: 'defensive',
+    scene: 'ash_tract',
+    deck: ['enemy_guard', 'golem_smash', 'enemy_smite', 'golem_smash'],
+    soulsDrop: 60,
+    essenceChance: 0.35,
+    resistances: { fire: 0.25 },
+    artPrompt: 'charred heavy knight with smoldering embers glowing inside cracked armor, raising a burning mace behind a tall shield, guarded stance',
   },
-  shadow_minion: {
-    id: 'shadow_minion',
-    name: 'Тень',
+
+  // ---------- Миньоны ----------
+  scavenger_drone: {
+    id: 'scavenger_drone',
+    name: 'Пепельный прислужник',
     maxHp: 15,
     level: 3,
     aiStyle: 'aggressive',
     deck: ['shadow_hit'],
     soulsDrop: 0,
     essenceChance: 0,
+    artPrompt: 'small crawling ash imp made of cinders and bone splinters, claws clutching a stolen trinket, darting low pose',
   },
-  // ---------- Враги Акта 2 «Пепельный город» ----------
-  ash_guard: {
-    id: 'ash_guard',
-    name: 'Пепельный страж',
-    maxHp: 42,
-    level: 3,
-    aiStyle: 'balanced',
-    scene: 'battle_ruins',
-    deck: ['ash_guard_slash', 'ash_guard_slash', 'ash_guard_whirl', 'enemy_guard'],
-    soulsDrop: 45,
-    essenceChance: 0.35,
-    artPrompt: 'ash city guard with fused armor and empty eyes, dark souls style',
-  },
-  ghost_priest: {
-    id: 'ghost_priest',
-    name: 'Жрец-призрак',
-    maxHp: 46,
-    level: 3,
-    aiStyle: 'tactical',
-    scene: 'battle_shrine',
-    deck: ['priest_burn', 'priest_circle', 'enemy_guard', 'priest_burn'],
-    soulsDrop: 60,
-    essenceChance: 0.4,
-    resistances: { fire: 0.25 },
-    artPrompt: 'burnt priest ghost, candles floating around, hollow robes, dark souls style',
-  },
-  magic_golem: {
-    id: 'magic_golem',
-    name: 'Магический голем',
-    maxHp: 55,
-    level: 4,
-    aiStyle: 'defensive',
-    scene: 'battle_shrine',
-    deck: ['golem_guard', 'golem_smash2', 'golem_guard', 'golem_smash2'],
-    soulsDrop: 65,
-    essenceChance: 0.45,
-    resistances: { holy: 0.5 },
-    artPrompt: 'runic stone golem with glowing symbols, arcane shield, dark souls style',
-  },
-  siege_shadow: {
-    id: 'siege_shadow',
-    name: 'Тень осады',
-    maxHp: 18,
-    level: 3,
-    aiStyle: 'aggressive',
-    deck: ['siege_hit', 'siege_hit'],
-    soulsDrop: 0,
-    essenceChance: 0,
-    allyDeathBonus: 1,
-    artPrompt: 'shadow wraith rising from city ash, dark souls style',
-  },
-  king_shadow: {
-    id: 'king_shadow',
-    name: 'Тень Короля',
-    maxHp: 143,
-    level: 8,
-    aiStyle: 'aggressive',
-    scene: 'boss_throne',
-    deck: [
-      'ks_shadow_spear', 'ks_summon', 'ks_scream',
-      'ks_fire_blast', 'ks_shadow_step', 'ks_curse', 'ks_last_strike',
-    ],
-    soulsDrop: 250,
-    essenceChance: 1.0,
-    boss: {
-      phases: [
-        { name: 'Тень и Копьё', hpThresholdPct: 100 },
-        {
-          name: 'Тень и Огонь',
-          hpThresholdPct: 50,
-          summon: { defId: 'siege_shadow', name: 'Тень', hp: 20, count: 2, deck: ['siege_hit'] },
-        },
-      ],
-    },
-    artPrompt: 'shadow of a fallen king wearing empty crown, black armor, throne hall, dark souls boss',
-  },
-  bone_king: {
-    id: 'bone_king',
-    name: 'Король костей',
-    scene: 'boss_throne',
+
+  // ---------- Босс ----------
+  collector: {
+    id: 'collector',
+    name: 'Король-Пепел',
+    scene: 'throne_room',
     maxHp: 85,
     level: 5,
     aiStyle: 'aggressive',
@@ -255,31 +135,34 @@ export const ENEMIES: Record<string, EnemyDefinition> = {
     essenceChance: 1.0,
     boss: {
       phases: [
-        { name: 'Владыка костей', hpThresholdPct: 100 },
+        { name: 'Трон из пепла', hpThresholdPct: 100 },
         {
-          name: 'Гниющий гнев',
+          name: 'Зов углей',
           hpThresholdPct: 50,
-          onEnter: { applyState: { type: 'fury', stacks: 1, duration: 99 } },
+          summon: { defId: 'scavenger_drone', name: 'Пепельный прислужник', hp: 15, count: 2, deck: ['shadow_hit'] },
         },
       ],
       ritual: {
         everyTurns: 3,
-        label: 'Воскрешение павших',
+        label: 'Поглощение душ',
         action: { heal: 8 },
       },
     },
-    artPrompt: 'skeleton king on throne of bones, crown of thorns, regal undead, dark souls boss, dark fantasy',
+    artPrompt: 'colossal Ash King towering from a throne of cinders: crown of melted swords fused to his skull, robes of grey ash flowing like smoke, one hand radiating pale soul-flame, dead burning world behind, boss arena',
   },
 };
 
-/** Пул обычных врагов для генерации выборов на экране похода. */
+/** Пул обычных врагов для генерации узлов похода. */
 export const NORMAL_ENEMY_POOL: string[] = [
-  'fallen_soldier',
-  'crypt_hound',
-  'hollow_archer',
-  'grave_warden',
-  'ash_brigand',
+  'lost_passerby',
+  'rusty_dog',
+  'cleaner_drone',
+  'vending_machine',
+  'security_camera',
 ];
 
+/** Элитные враги (узлы «Лютый враг»). */
+export const ELITE_ENEMY_POOL: string[] = ['laundry_unit', 'lost_courier', 'welder_bot'];
+
 /** Боссы (глубина, кратная BALANCE.progression.bossEveryDepth). */
-export const BOSS_POOL: string[] = ['bone_king'];
+export const BOSS_POOL: string[] = ['collector'];

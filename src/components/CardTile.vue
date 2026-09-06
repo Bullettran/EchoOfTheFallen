@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * Переиспользуемая плитка карты для хаба (кузница/мастерская/хранилище).
- * С рамкой card_frame: рамка — фон, арт — в «окне» сверху, текст — снизу.
+ * Переиспользуемая плитка карты для хаба (Кузня/Горнило/Реликварий).
+ * Рамка card_frame натянута через border-image (используются только её края),
+ * арт — в фиксированном окне сверху, object-fit: contain (виден ЦЕЛИКОМ).
  */
 import { computed } from 'vue';
 import { getCardDefinition, describeCardHtml } from '@/game/CardFactory';
@@ -33,18 +34,23 @@ const rarityColor: Record<string, string> = {
   <div
     class="tile"
     :class="{ selected, framed: Boolean(frame) }"
-    :style="[
-      frame ? { backgroundImage: `url(${frame})` } : { borderColor: rarityColor[def.rarity] },
-      !frame && artUrl ? { backgroundImage: `url(${artUrl})` } : {},
-    ]"
+    :style="frame
+      ? { borderImageSource: `url(${frame})` }
+      : [
+          { borderColor: rarityColor[def.rarity] },
+          artUrl ? { backgroundImage: `url(${artUrl})` } : {},
+        ]"
   >
-    <img v-if="frame && artUrl" :src="artUrl" class="art-window" alt="" />
     <span class="cost">{{ def.cost }}</span>
     <span v-if="badge" class="badge">{{ badge }}</span>
     <div class="name">
       {{ def.name }}<span v-if="instance.upgradeLevel > 0" class="up">+{{ instance.upgradeLevel }}</span>
     </div>
     <div class="type">{{ def.type }}</div>
+    <div class="art">
+      <img v-if="artUrl" :src="artUrl" alt="" />
+      <template v-else>✦</template>
+    </div>
     <div class="desc" v-html="descHtml"></div>
   </div>
 </template>

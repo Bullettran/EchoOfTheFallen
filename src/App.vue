@@ -7,11 +7,9 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useUiStore } from '@/stores/ui';
 import MenuScreen from '@/components/MenuScreen.vue';
 import HubScreen from '@/components/HubScreen.vue';
-import EncounterSelect from '@/components/EncounterSelect.vue';
-import BattleScreen from '@/components/BattleScreen.vue';
-import StoryScreen from '@/components/StoryScreen.vue';
-import ActCompleteScreen from '@/components/ActCompleteScreen.vue';
 import ClassSelectScreen from '@/components/ClassSelectScreen.vue';
+import BattleScreen from '@/components/BattleScreen.vue';
+import TrialMapScreen from '@/components/TrialMapScreen.vue';
 import AshOverlay from '@/components/AshOverlay.vue';
 
 const ui = useUiStore();
@@ -37,12 +35,10 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateScale));
   <div class="stage-root">
     <div ref="stage" class="stage">
       <MenuScreen v-if="ui.screen === 'menu'" />
+      <ClassSelectScreen v-else-if="ui.screen === 'class_select'" />
       <HubScreen v-else-if="ui.screen === 'hub'" />
-      <EncounterSelect v-else-if="ui.screen === 'map'" />
-      <StoryScreen v-else-if="ui.screen === 'story'" />
-  <ActCompleteScreen v-else-if="ui.screen === 'act_complete'" />
-  <ClassSelectScreen v-else-if="ui.screen === 'class_select'" />
-  <BattleScreen v-else />
+      <TrialMapScreen v-else-if="ui.screen === 'trial'" />
+      <BattleScreen v-else />
     </div>
   </div>
   <AshOverlay />

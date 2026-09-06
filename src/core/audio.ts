@@ -37,7 +37,6 @@ export function bgForScreen(screen: Screen): string | null {
   switch (screen) {
     case 'menu':
     case 'battle':
-    case 'act_complete':
       return bgByName[BG_MENU] ? BG_MENU : null;
     default:
       return bgByName[BG_HUB] ? BG_HUB : null;

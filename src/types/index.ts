@@ -86,8 +86,17 @@ export interface StateInstance {
 
 export type Side = 'player' | 'enemy';
 
-/** Идентификаторы ветвей дерева навыков (Алтарь душ). */
+/** Идентификаторы ветвей дерева навыков (Алтарь). */
 export type BranchId = 'strength' | 'dexterity' | 'intellect' | 'endurance' | 'spirit';
+
+/** Уникальный дар класса — пассивка, качается в Алтаре до 10 уровня. */
+export type GiftId = 'thorns' | 'first_strike' | 'soul_harvest';
+
+/** Дар, передаваемый в движок боя (level 0 = дар не пробуждён). */
+export interface GiftConfig {
+  id: GiftId;
+  level: number;
+}
 
 /**
  * Агрегированные боевые модификаторы, собранные из дерева навыков.
@@ -119,7 +128,7 @@ export interface CombatStats {
   blessingOnStart: number;
   /** Раз в бой пережить смертельный удар с 1 HP (Несокрушимость) */
   surviveLethalOnce: boolean;
-  /** +% к получаемым душам */
+  /** +% к собираемым душам */
   soulsBonusPct: number;
 }
 
@@ -166,7 +175,7 @@ export interface EnemyBossPhase {
   summon?: SummonSpec;
 }
 
-/** Периодический автоэффект босса на его ходу (например «Воскрешение павших»). */
+/** Периодический автоэффект босса на его ходу (например «Поглощение душ» Короля-Пепла). */
 export interface BossRitual {
   everyTurns: number;
   label: string;
@@ -198,9 +207,9 @@ export interface EnemyDefinition {
   aiStyle: AIStyle;
   /** id карт из data/cards.ts (enemy-карты тоже карты) */
   deck: string[];
-  /** Дроп прототипа: души (валюта хаба) */
+  /** Дроп: души (валюта Последнего очага; внутренний ключ souls) */
   soulsDrop: number;
-  /** Шанс дропа эссенции (ресурс Мастерской) */
+  /** Шанс дропа углей (ресурс Горнила) */
   essenceChance: number;
   /** Фон арены боя (см. core/assets.ts SceneId). boss_throne — у боссов */
   scene?: SceneId;
@@ -216,10 +225,22 @@ export interface EnemyDefinition {
   artPrompt?: string;
 }
 
+/** Одна строка плана врага: карта и её эффект (для полного превью хода). */
+export interface IntentPart {
+  kind: 'attack' | 'defend' | 'buff' | 'debuff';
+  /** Число (урон/блок/лечение), если применимо */
+  value?: number;
+  /** Человекочитаемый эффект: «9 урона», «Горение 2 на тебя» */
+  detail: string;
+  cardName: string;
+}
+
 /** Намерение врага, показываемое игроку до его хода. */
 export interface EnemyIntent {
   kind: 'attack' | 'defend' | 'buff' | 'unknown';
   /** Суммарный урон/блок для превью */
   value?: number;
   cardName: string;
+  /** Полный план хода (все карты по порядку); unknown — пуст */
+  parts?: IntentPart[];
 }

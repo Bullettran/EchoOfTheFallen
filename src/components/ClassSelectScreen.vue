@@ -1,89 +1,62 @@
 <script setup lang="ts">
 /**
- * Экран выбора класса перед Актом I: 5 классов-карточек.
- * Класс = story-статы + карта (сразу в колоду!) + приветственный текст Колумбария.
+ * Экран выбора класса: Пепельный = стартовая колода + стартовые уровни Алтаря.
+ * Выбор запускает новый профиль (старый прогресс теряется — предупреждение в меню).
  */
-import { useStoryStore } from '@/stores/story';
+import { useUiStore } from '@/stores/ui';
+import { useMetaStore } from '@/stores/meta';
+import { CLASS_LIST } from '@/data/classes';
+import { BRANCHES } from '@/data/skills';
+import { getCardDefinition } from '@/game/CardFactory';
+import { uiUrl } from '@/core/assets';
+import type { BranchId } from '@/types';
 
-const story = useStoryStore();
+const ui = useUiStore();
+const meta = useMetaStore();
 
-const CLASSES = [
-  {
-    id: 'warden',
-    title: 'Страж',
-    quote: '«Я охранял эти стены.»',
-    desc: 'Тяжесть в руках. Память меча. Ты помнишь, как падал, защищая кого-то.',
-    stats: '+2 Силы',
-    card: 'warden_blade',
-    cardName: 'Клинок стража (6 урона)',
-  },
-  {
-    id: 'priest',
-    title: 'Жрец',
-    quote: '«Я читал огонь.»',
-    desc: 'Жар на коже. Слова, зажигавшие свет. Ты помнишь, как они погасли.',
-    stats: '+2 Интеллекта',
-    card: 'ash_word',
-    cardName: 'Слово пепла (4 урона, горение)',
-  },
-  {
-    id: 'wanderer',
-    title: 'Странник',
-    quote: '«Я искал правду.»',
-    desc: 'Ветер дорог, ведущих в никуда. Ты помнишь, что никогда не находил.',
-    stats: '+2 Памяти',
-    card: 'ash_trace',
-    cardName: 'Пепельный след (добор 2)',
-  },
-  {
-    id: 'heretic',
-    title: 'Еретик',
-    quote: '«Я шептал запретное.»',
-    desc: 'Горечь на языке. Слова, от которых гнило железо. Ты помнишь, как тебя сожгли.',
-    stats: '+2 Гнева',
-    card: 'heresy',
-    cardName: 'Ересь (2 урона, яд 4)',
-  },
-  {
-    id: 'blank',
-    title: 'Чистый лист',
-    quote: '«Я был никем.»',
-    desc: 'Пустота. Ты ничего не помнишь — и помнишь, что это твой выбор.',
-    stats: '+1 ко всему',
-    card: 'void_card',
-    cardName: 'Пустота (1 урон, +1 энергия)',
-  },
-] as const;
+const branchName = (id: BranchId): string => BRANCHES.find((b) => b.id === id)?.name ?? id;
 
-type ClassId = 'warden' | 'priest' | 'wanderer' | 'heretic' | 'blank';
-
-const pick = (classId: ClassId): void => {
-  story.startWithClass(classId);
+const cardOf = (cls: (typeof CLASS_LIST)[number]) => {
+  // Одна «визитная» карта класса для карточки
+  const hero = { courier: 'heavy_blow', welder: 'plate_armor', companion: 'rust_bomb' } as const;
+  return getCardDefinition(hero[cls.id]);
 };
+
+const pick = (classId: 'courier' | 'welder' | 'companion'): void => {
+  meta.resetProfile(classId);
+  ui.setScreen('hub');
+};
+
+const back = (): void => ui.setScreen('menu');
 </script>
 
 <template>
   <div class="class-select">
     <div class="intro">
-      <p class="whisper">«Ты — никто. Ты — все. Ты — пепел. Ты — искра.<br/>Выбери, кем ты был, — и узнаешь, кем станешь».</p>
+      <p class="whisper">Мир сгорел в Великом Пожаре. Боги и люди стали пеплом.<br />Выбери, кто понесёт их души дальше.</p>
     </div>
 
     <div class="cards">
-      <button
-        v-for="c in CLASSES"
-        :key="c.id"
-        class="cls-card"
-        @click="pick(c.id)"
-      >
-        <h3>{{ c.title }}</h3>
+      <button v-for="c in CLASS_LIST" :key="c.id" class="cls-card" @click="pick(c.id)">
+        <div class="portrait">
+          <img v-if="uiUrl(c.portrait)" :src="uiUrl(c.portrait)!" alt="" />
+          <span v-else class="ph">{{ c.icon }}</span>
+        </div>
+        <h3>{{ c.icon }} {{ c.name }}</h3>
+        <p class="role">{{ c.role }}</p>
         <p class="quote">{{ c.quote }}</p>
         <p class="desc">{{ c.desc }}</p>
-        <div class="stats">{{ c.stats }}</div>
-        <div class="card-gain">{{ c.cardName }}</div>
+        <div class="skills">
+          <span v-for="(lvl, id) in c.startSkills" :key="id" class="skill-tag">
+            +{{ lvl }} {{ branchName(id) }}
+          </span>
+        </div>
+        <div class="card-gain">Реликвия класса: «{{ cardOf(c).name }}»</div>
+        <div class="card-gain gift">Дар: {{ c.gift.icon }} {{ c.gift.name }} — {{ c.gift.describe(1) }}</div>
       </button>
     </div>
 
-    <button class="back" @click="story.cancelClassSelect()">← Назад в убежище</button>
+    <button class="back" @click="back">← Назад в меню</button>
   </div>
 </template>
 

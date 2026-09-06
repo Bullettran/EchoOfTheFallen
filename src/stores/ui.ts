@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia';
 import { playBg, bgForScreen } from '@/core/audio';
 
-export type Screen = 'menu' | 'hub' | 'map' | 'battle' | 'story' | 'act_complete' | 'class_select';
+export type Screen = 'menu' | 'class_select' | 'hub' | 'battle' | 'trial';
 
 export const useUiStore = defineStore('ui', {
   state: (): { screen: Screen } => ({ screen: 'menu' }),

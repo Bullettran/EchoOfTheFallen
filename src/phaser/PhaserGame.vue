@@ -19,8 +19,10 @@ onMounted(() => {
   game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: container.value,
-    width: 1280,
-    height: 720,
+    // Внутренний рендер крупнее логических 1280×720: на больших экранах
+    // canvas даунскейлится (резче), а не апскейлится (мыло)
+    width: 1920,
+    height: 1080,
     backgroundColor: '#0b0a0f',
     roundPixels: true,
     scale: {

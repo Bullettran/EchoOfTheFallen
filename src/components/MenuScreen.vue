@@ -10,16 +10,17 @@ import { sceneUrl } from '@/core/assets';
 
 const meta = useMetaStore();
 const ui = useUiStore();
-const bg = sceneUrl('hub_scene');
+const bg = sceneUrl('menu_bg') ?? sceneUrl('station');
 const confirmReset = ref(false);
 const hasProgress = computed(() => meta.hasProgress);
 
 const continueGame = (): void => ui.setScreen('hub');
 
+// «Новая игра»: сначала подтверждение потери прогресса, затем выбор класса.
+// Сам сброс профиля происходит в момент выбора Пепельного на ClassSelectScreen.
 const newGame = (): void => {
-  meta.resetProfile();
   confirmReset.value = false;
-  ui.setScreen('hub');
+  ui.setScreen('class_select');
 };
 </script>
 
@@ -27,9 +28,9 @@ const newGame = (): void => {
   <div class="menu" :style="bg ? { backgroundImage: `url(${bg})` } : {}">
     <div class="shade">
       <div class="title-block">
-        <span class="over">карточная roguelike о павших</span>
+        <span class="over">карточный рогалик о душах павших</span>
         <h1>ECHOES<br />OF THE FALLEN</h1>
-        <span class="under">демо · Акт I: Голос из пепла</span>
+        <span class="under">демо · Угольные пустоши</span>
       </div>
 
       <div class="menu-buttons">
@@ -40,7 +41,7 @@ const newGame = (): void => {
           {{ hasProgress ? 'Новая игра' : 'Начать игру' }}
         </button>
         <template v-else>
-          <p class="warn">Весь прогресс — души, карты, навыки — будет потерян.</p>
+          <p class="warn">Весь прогресс — души, карты, навыки — будет потерян. Далее — выбор Пепельного.</p>
           <div class="row">
             <button class="btn danger" @click="newGame">Да, начать с нуля</button>
             <button class="btn" @click="confirmReset = false">Отмена</button>

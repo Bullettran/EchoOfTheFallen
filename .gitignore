@@ -6,8 +6,7 @@ artgen.json
 *.log
 .DS_Store
 .vite/
-e2e-battle.png
-hub.png
-map.png
-battle.png
+
+# Скриншоты E2E (Playwright MCP) — временные артефакты проверки
+tests/screenshots/
 .playwright-mcp/

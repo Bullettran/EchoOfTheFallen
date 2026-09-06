@@ -5,7 +5,7 @@
  * Папки (соглашение об именах: имя файла = id сущности):
  *   skills/     — арты карт (strike.jpeg, guard.jpeg...)
  *   enemies/    — портреты врагов (bone_king.jpeg...)
- *   scenes/     — фоны сцен (battle_crypt.jpeg, hub_scene.jpeg...)
+ *   scenes/     — фоны сцен (station.jpeg, ash_wastes_path.jpeg...)
  *   conditions/ — иконки состояний (burn.jpeg, poison.jpeg...)
  *   ui/         — интерфейс (orb_full, cursor, soul_icon, panel_frame...)
  */
@@ -75,17 +75,7 @@ export function enemyPortraitUrl(defId: string): string | null {
 const ENEMY_ART_FALLBACK: Record<string, string | undefined> = {}; // заполняется ниже после glob
 
 function initFallbacks(): void {
-  const pick = (...ids: string[]): string | undefined => {
-    for (const id of ids) if (enemies[id]) return enemies[id];
-    return undefined;
-  };
-  ENEMY_ART_FALLBACK.ash_echo = pick('fallen_soldier');
-  ENEMY_ART_FALLBACK.gate_trial = pick('grave_warden');
-  ENEMY_ART_FALLBACK.fire_golem = pick('ash_brigand');
-  ENEMY_ART_FALLBACK.hammer_trial = pick('ash_brigand');
-  ENEMY_ART_FALLBACK.sisters_shadow = pick('hollow_archer');
-  ENEMY_ART_FALLBACK.gate_shadow = pick('bone_king');
-  ENEMY_ART_FALLBACK.shadow_minion = pick('crypt_hound');
+  void initFallbacks; // точка расширения для будущих сценариев без артов
 }
 initFallbacks();
 
@@ -94,10 +84,19 @@ export function conditionIconUrl(type: string): string | null {
   return conditions[type] ?? null;
 }
 
-/** Идентификаторы сцен боя/хаба (= имена файлов без расширения). */
-export type SceneId = 'battle_crypt' | 'battle_ruins' | 'battle_shrine' | 'boss_throne' | 'hub_scene' | 'ash_city' | 'ash_market' | 'fire_temple' | 'mage_tower' | 'king_palace';
+/** Идентификаторы сцен боя/Последнего очага (= имена файлов без расширения). */
+export type SceneId =
+  | 'station'
+  | 'menu_bg'
+  | 'ash_wastes_path'
+  | 'ash_tract'
+  | 'ruined_cathedral'
+  | 'catacombs'
+  | 'shattered_rampart'
+  | 'burned_village'
+  | 'throne_room';
 
-/** Фон сцены. hub_scene — фон убежища, остальные — бои. */
+/** Фон сцены. station/menu_bg — Последний очаг и главное меню, остальные — арены боя. */
 export function sceneUrl(scene: SceneId): string | null {
   return scenes[scene] ?? null;
 }

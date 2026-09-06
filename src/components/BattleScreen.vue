@@ -14,16 +14,15 @@ import BattleLogCompact from '@/components/BattleLogCompact.vue';
 import { useBattleStore } from '@/stores/battle';
 import { useUiStore } from '@/stores/ui';
 import { useMetaStore } from '@/stores/meta';
-import { useStoryStore } from '@/stores/story';
+import { useTrialStore } from '@/stores/trial';
 import { eventBus } from '@/core/EventBus';
-import { uiUrl } from '@/core/assets';
+import { STATES } from '@/data/states';
+import type { StateInstance } from '@/types';
 
 const store = useBattleStore();
 const ui = useUiStore();
 const meta = useMetaStore();
-const story = useStoryStore();
-const soulIcon = uiUrl('soul_icon');
-const essenceIcon = uiUrl('essence_icon');
+const trial = useTrialStore();
 
 /** HP < 30% — красная пульсация краёв экрана */
 const lowHp = computed(() => {
@@ -54,6 +53,11 @@ const onHeal = ({ targetId, amount }: { targetId: string; amount: number }): voi
 const onBlock = ({ targetId, amount }: { targetId: string; amount: number }): void => {
   spawnFloat(targetId, `🛡${amount}`, '#6db3ff');
 };
+/** Наложение состояния — всплывашка с иконкой и именем (биты/дебафы всегда видны) */
+const onState = ({ targetId, state }: { targetId: string; state: StateInstance }): void => {
+  const def = STATES[state.type];
+  spawnFloat(targetId, `${def.icon} ${def.name}`, def.color);
+};
 
 const removeFloat = (id: number): void => {
   floats.value = floats.value.filter((f) => f.id !== id);
@@ -63,18 +67,20 @@ onMounted(() => {
   eventBus.on('vfx:damage', onDamage);
   eventBus.on('vfx:heal', onHeal);
   eventBus.on('vfx:block', onBlock);
+  eventBus.on('vfx:state', onState);
 });
 onBeforeUnmount(() => {
   eventBus.off('vfx:damage', onDamage);
   eventBus.off('vfx:heal', onHeal);
   eventBus.off('vfx:block', onBlock);
+  eventBus.off('vfx:state', onState);
 });
 
 // ---- Туториал ----
 const TUTORIAL_STEPS = [
   { title: 'Рука и энергия', text: 'Клик по карте (или клавиши 1–9) разыгрывает её. Число в левом верхнем углу — стоимость в энергии ⚡. Энергия восстанавливается в начале каждого хода.' },
   { title: 'Намерение врага', text: 'Бейдж на карточке врага показывает его следующий ход: ⚔ — атака (число — урон), 🛡 — защита. Планируй: закройся блоком, когда он замахивается.' },
-  { title: 'Блок сгорает', text: '🛡 Блок защищает только до начала твоего следующего хода — не копи его впустую. Урон от Горения и Яда проходит сквозь блок.' },
+  { title: 'Блок сгорает', text: '🛡 Блок защищает только до начала твоего следующего хода — не копи его впустую. Урон от Горения и Гнили проходит сквозь блок.' },
 ];
 const tutorialStep = ref(-1);
 if (!meta.tutorialDone) tutorialStep.value = 0;
@@ -113,7 +119,7 @@ const nextTutorial = (): void => {
         <HandView />
         <div class="right-bottom">
           <div v-if="store.mercyAvailable" class="mercy">
-            <span class="mercy-text">Она больше не сражается...</span>
+            <span class="mercy-text">Он больше не сражается...</span>
             <button class="mercy-btn" @click="store.spareEnemy()">🤝 Пощадить</button>
           </div>
           <button class="end-turn" :class="{ ready: store.isPlayerTurn }" :disabled="!store.isPlayerTurn" @click="store.endTurn()">
@@ -127,27 +133,28 @@ const nextTutorial = (): void => {
         <div class="panel">
           <div class="ornament">✦ ──── ✦ ──── ✦</div>
           <h2 :class="{ spared: store.phase === 'spared' }">
-            {{ store.phase === 'victory' ? 'ПОБЕДА' : store.phase === 'spared' ? 'ПОЩАДА' : 'ВЫ ПАЛИ' }}
+            {{ store.phase === 'victory' ? 'ПОБЕДА' : store.phase === 'spared' ? 'ПОЩАДА' : 'ВЫ УГАСЛИ' }}
           </h2>
-          <p v-if="store.phase === 'spared'" class="souls">Она опускает оружие. Вода внизу абсолютно спокойна.</p>
-          <p v-else-if="store.phase === 'victory' && store.lastReward" class="souls">
-            <img v-if="soulIcon" :src="soulIcon" class="reward-icon" alt="" />
-            {{ store.lastReward.souls }} душ
-            <template v-if="store.lastReward.essence">
-              · <img v-if="essenceIcon" :src="essenceIcon" class="reward-icon" alt="" />
-              {{ store.lastReward.essence }} эссенция
-            </template>
-          </p>
-          <p v-else-if="store.phase === 'victory' && store.storyContext" class="souls">Эхо рассеивается. История продолжается.</p>
-          <p v-else class="souls">Тьма поглощает вас... но убежище ждёт.</p>
+          <p v-if="store.phase === 'spared'" class="souls">Он опускает оружие. Пепел медленно оседает на землю.</p>
+          <p v-else-if="store.phase === 'victory'" class="souls">Враг рассыпается пеплом. Можно собрать души.</p>
+          <p v-else class="souls">Уголёк гаснет... но Последний очаг воскресит тебя.</p>
 
-          <div v-if="store.storyContext" class="buttons">
-            <button v-if="store.phase !== 'defeat'" class="primary" @click="story.onStoryBattleEnd(store.phase === 'spared' ? 'spared' : 'victory')">Продолжить историю</button>
-            <button @click="story.onStoryBattleEnd('defeat')">Вернуться в убежище</button>
-          </div>
-          <div v-else class="buttons">
-            <button v-if="store.phase === 'victory'" class="primary" @click="ui.setScreen('map')">Продолжить поход (глубина {{ meta.progress.depth }})</button>
-            <button @click="ui.setScreen('hub')">Вернуться в убежище</button>
+          <!-- Походный бой: возврат на карту -->
+          <div class="buttons">
+            <button
+              v-if="store.phase !== 'defeat'"
+              class="primary"
+              @click="trial.onBattleEnd('victory', store.player?.hp ?? 0)"
+            >
+              Продолжить поход
+            </button>
+            <button
+              v-if="store.phase === 'defeat'"
+              @click="trial.onBattleEnd('defeat', 0)"
+            >
+              Поход окончен
+            </button>
+            <button @click="ui.setScreen('hub')">Вернуться в Очаг</button>
           </div>
           <div class="ornament">✦ ──── ✦ ──── ✦</div>
         </div>

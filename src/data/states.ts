@@ -4,6 +4,9 @@
  * ни про Phaser, ни про Vue — чистая логика, легко покрывается тестами.
  *
  * Добавить новое состояние = дописать один объект в STATES и тип в StateType.
+ *
+ * Внутренние id (burn/poison/...) — стабильные механические ключи движка;
+ * сеттинг меняется только в name/icon/describe.
  */
 import type { Combatant, StateInstance, StateType } from '@/types';
 
@@ -19,7 +22,7 @@ export interface StateDefinition {
   /** Иконка-заглушка для UI (до этапа генерации ассетов) */
   icon: string;
   color: string;
-  /** Полярность: true — бафф носителя (для cleanse «снять положительные») */
+  /** Полярность: True — бафф носителя (для cleanse «снять положительные») */
   positive?: boolean;
   /** Человекочитаемое описание с учётом текущих стэков */
   describe: (s: StateInstance) => string;
@@ -47,19 +50,19 @@ const burn: StateDefinition = {
   },
 };
 
-/** Отравление: урон = stacks, затем stacks−1. Длительность не ограничена. */
+/** Гниль: урон = stacks, затем stacks−1. Длительность не ограничена. */
 const poison: StateDefinition = {
   type: 'poison',
-  name: 'Отравление',
+  name: 'Гниль',
   icon: '☠',
   color: '#7dd87d',
-  describe: (s) => `Отравление: −${s.stacks} HP в конце хода, сила яда падает`,
+  describe: (s) => `Гниль: −${s.stacks} HP в конце хода, плоть осыпается`,
   onTurnEnd: (holder, s, ctx) => {
     ctx.dealDamage(holder, s.stacks, 'state');
     s.stacks -= 1;
   },
   merge: (ex, inc) => {
-    ex.stacks += inc.stacks; // яд накапливается
+    ex.stacks += inc.stacks; // гниль накапливается
   },
 };
 
@@ -68,7 +71,7 @@ const bleed: StateDefinition = {
   type: 'bleed',
   name: 'Кровотечение',
   icon: '🩸',
-  color: '#d43b3b',
+  color: '#d4a03c',
   describe: (s) => `Кровотечение: −${s.stacks} HP при каждой вашей атаке (${s.duration} ход.)`,
   onHolderAttack: (holder, s, ctx) => ctx.dealDamage(holder, s.stacks, 'state'),
   merge: (ex, inc) => {
@@ -77,13 +80,13 @@ const bleed: StateDefinition = {
   },
 };
 
-/** Благословение: HoT, лечение = stacks, затем stacks−1. */
+/** Милость: HoT, восстановление = stacks, затем stacks−1. */
 const blessing: StateDefinition = {
   type: 'blessing',
-  name: 'Благословение',
+  name: 'Милость',
   icon: '✨',
   color: '#e8d48b',
-  describe: (s) => `Благословение: +${s.stacks} HP в конце хода`,
+  describe: (s) => `Милость: +${s.stacks} HP в конце хода`,
   onTurnEnd: (holder, s, ctx) => {
     ctx.heal(holder, s.stacks);
     s.stacks -= 1;
@@ -97,7 +100,7 @@ const blessing: StateDefinition = {
 const fury: StateDefinition = {
   type: 'fury',
   name: 'Ярость',
-  icon: '😡',
+  icon: '⚡',
   color: '#ff3b3b',
   positive: true,
   describe: () => 'Ярость: урон +50%, получаемый блок −50%',
@@ -106,27 +109,25 @@ const fury: StateDefinition = {
   },
 };
 
-/** Уязвимость: получаемый урон +50%. */
+/** Пробитая броня: получаемый урон +50%. */
 const vulnerable: StateDefinition = {
   type: 'vulnerable',
-  name: 'Уязвимость',
-  icon: '💔',
+  name: 'Пробитая броня',
+  icon: '🔓',
   color: '#c05bff',
-  describe: (s) => `Уязвимость: получаемый урон +50% (${s.duration} ход.)`,
+  describe: (s) => `Пробитая броня: получаемый урон +50% (${s.duration} ход.)`,
   merge: (ex, inc) => {
     ex.duration = Math.max(ex.duration ?? 0, inc.duration ?? 0);
   },
 };
 
-/** Благословение — положительное состояние (жрец-призрак снимает «Короной»). */
-
-/** Печать лечения («Проклятие Короля»): карты лечения не работают 1 ход. */
+/** Порча («Голод Короля-Пепла»): карты исцеления не работают 1 ход. */
 const healBan: StateDefinition = {
   type: 'heal_ban',
-  name: 'Печать лечения',
+  name: 'Порча',
   icon: '🚫',
   color: '#8a4a5a',
-  describe: (s) => `Карты лечения не работают (${s.duration} ход.)`,
+  describe: (s) => `Карты исцеления не работают (${s.duration} ход.)`,
   merge: (ex, inc) => {
     ex.duration = Math.max(ex.duration ?? 0, inc.duration ?? 0);
   },

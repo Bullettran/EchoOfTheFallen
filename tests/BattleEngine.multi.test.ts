@@ -105,7 +105,7 @@ describe('BattleEngine: мульти-враг', () => {
     expect(e.enemySlots[1]!.unit.hp).toBe(100 - 6);
   });
 
-  it('намерения считаются для каждого слота отдельно', () => {
+  it('намерения считаются для каждого слота отдельно и показывают ПОЛНЫЙ план', () => {
     const e = makeEngine(['guard', 'guard', 'guard', 'guard', 'guard'], {}, [
       dummyEnemy,
       { ...dummyEnemy2, aiStyle: 'defensive' },
@@ -113,7 +113,13 @@ describe('BattleEngine: мульти-враг', () => {
     e.start();
     const intents = e.enemyIntents;
     expect(intents).toHaveLength(2);
+    // Агрессивный: начинает с атаки (хотя после может добрать блок)
     expect(intents[0]!.kind).toBe('attack');
-    expect(intents[1]!.kind).toBe('defend');
+    expect(intents[0]!.parts![0]!.kind).toBe('attack');
+    // Защитный: сначала блок, потом атака — намерение показывает и то и другое
+    expect(intents[1]!.parts!.some((p) => p.kind === 'defend')).toBe(true);
+    expect(intents[1]!.parts!.some((p) => p.kind === 'attack')).toBe(true);
+    // Наличие атаки в плане делает вид намерения «attack» (урон игроку важнее)
+    expect(intents[1]!.kind).toBe('attack');
   });
 });
