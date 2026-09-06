@@ -6,7 +6,9 @@
  * План врага формируется ДО его хода и виден игроку как «намерение».
  */
 import { resolveCardAction, getCardDefinition } from '@/game/CardFactory';
-import type { AIStyle, CardInstance, Combatant, EnemyIntent } from '@/types';
+import { STATES } from '@/data/states';
+import { BALANCE } from '@/core/config';
+import type { AIStyle, CardInstance, Combatant, EnemyIntent, IntentPart } from '@/types';
 
 export interface AIInput {
   self: Combatant;
@@ -53,15 +55,79 @@ export function decide(aiStyle: AIStyle, input: AIInput): AIDecision {
   }
 }
 
-/** Превью плана врага для HUD (до его хода). */
-export function buildIntent(firstCard: CardInstance | null): EnemyIntent {
-  if (!firstCard) return { kind: 'unknown', cardName: 'Сосредотачивается...' };
-  const act = resolveCardAction(firstCard);
-  if ((act.damage ?? 0) > 0) {
-    return { kind: 'attack', value: act.damage, cardName: getCardDefinition(firstCard.defId).name };
+/**
+ * Собрать намерение из ПОЛНОГО плана хода (все карты, которые враг сыграет).
+ * Отражает и атаку, и защиту, и состояния — игрок видит всё, что будет делать враг.
+ *
+ * Числа урона считаются по той же формуле, что и реальный ход (dealAttackDamage):
+ * (base + бонус глубины) × Ярость × Пробитая броня, с floor на каждый удар.
+ * Модификаторы симулируются ПО ПОРЯДКУ плана: если первой картой враг накладывает
+ * Ярость — следующие атаки плана уже посчитаны с ×1.5.
+ *
+ * @param dmgBonus плоский бонус урона слота (скейлинг глубины)
+ * @param mods состояния на момент начала хода (могут дожить до атак)
+ */
+export function buildPlanIntent(
+  cards: CardInstance[],
+  dmgBonus = 0,
+  mods: { attackerHasFury?: boolean; targetHasVulnerable?: boolean } = {},
+): EnemyIntent {
+  if (cards.length === 0) return { kind: 'unknown', cardName: 'Сосредотачивается...' };
+
+  let simFury = mods.attackerHasFury ?? false;
+  let simVuln = mods.targetHasVulnerable ?? false;
+  const parts: IntentPart[] = [];
+
+  for (const card of cards) {
+    const def = getCardDefinition(card.defId);
+    const act = resolveCardAction(card);
+    if ((act.damage ?? 0) > 0) {
+      const total = Math.floor(
+        ((act.damage ?? 0) + dmgBonus) *
+          (simFury ? BALANCE.combat.furyDamageMult : 1) *
+          (simVuln ? BALANCE.combat.vulnerableDamageMult : 1),
+      );
+      parts.push({ kind: 'attack', value: total, detail: `${total} урона`, cardName: def.name });
+    }
+    if ((act.block ?? 0) > 0) {
+      const block = Math.floor((act.block ?? 0) * (simFury ? BALANCE.combat.furyBlockMult : 1));
+      parts.push({ kind: 'defend', value: block, detail: `${block} блока`, cardName: def.name });
+    }
+    if ((act.heal ?? 0) > 0) {
+      parts.push({ kind: 'buff', value: act.heal, detail: `+${act.heal} HP`, cardName: def.name });
+    }
+    if (act.applyState) {
+      const st = act.applyState;
+      const stName = STATES[st.type].name;
+      const detail = `${stName} ${st.stacks}${st.duration ? ` (${st.duration} х.)` : ''}`;
+      if (st.target === 'self') {
+        parts.push({ kind: 'buff', detail: `${detail} на себя`, cardName: def.name });
+        // Ярость, наложенная первой картой хода, усилит остальные атаки плана
+        if (st.type === 'fury') simFury = true;
+      } else {
+        parts.push({ kind: 'debuff', detail: `${detail} на тебя`, cardName: def.name });
+        if (st.type === 'vulnerable') simVuln = true;
+      }
+    }
   }
-  if ((act.block ?? 0) > 0) {
-    return { kind: 'defend', value: act.block, cardName: getCardDefinition(firstCard.defId).name };
+
+  // Приоритет вида намерения: атака > защита > усиление
+  const sum = (kind: IntentPart['kind']): number =>
+    parts.filter((p) => p.kind === kind).reduce((s, p) => s + (p.value ?? 0), 0);
+  let kind: EnemyIntent['kind'] = 'buff';
+  let value: number | undefined;
+  if (parts.some((p) => p.kind === 'attack')) {
+    kind = 'attack';
+    value = sum('attack');
+  } else if (parts.some((p) => p.kind === 'defend')) {
+    kind = 'defend';
+    value = sum('defend');
   }
-  return { kind: 'buff', cardName: getCardDefinition(firstCard.defId).name };
+
+  return {
+    kind,
+    value,
+    cardName: cards.map((c) => getCardDefinition(c.defId).name).join(' + '),
+    parts,
+  };
 }

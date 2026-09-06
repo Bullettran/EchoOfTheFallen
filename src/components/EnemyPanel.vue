@@ -3,32 +3,49 @@
  * Карточки врагов (Hearthstone-стиль): вертикальная карточка с портретом,
  * HP-баром на карточке, блоком, намерением и состояниями.
  * Клик по живой карточке — выбор цели атаки.
+ * Намерение — ПОЛНЫЙ план хода врага (все карты), не только первое действие.
  */
 import { useBattleStore } from '@/stores/battle';
 import { useArtStore } from '@/stores/art';
 import { STATES } from '@/data/states';
 import { conditionIconUrl } from '@/core/assets';
+import type { EnemyIntent, IntentPart } from '@/types';
 
 const store = useBattleStore();
 const art = useArtStore();
 
-const intentText = (kind: string, value?: number): string => {
-  switch (kind) {
-    case 'attack': return `⚔ ${value}`;
-    case 'defend': return `🛡 ${value}`;
-    case 'buff': return '◈';
-    default: return '...';
-  };
+/** Бейдж: агрегированный план по видам — «⚔ 16 · 🛡 6 · ✦». */
+const intentBadge = (intent: EnemyIntent): string => {
+  if (!intent.parts || intent.parts.length === 0) {
+    if (intent.kind === 'unknown') return '...';
+    return intent.kind === 'attack' ? `⚔ ${intent.value}` : intent.kind === 'defend' ? `🛡 ${intent.value}` : '◈';
+  }
+  const chips: string[] = [];
+  const sum = (k: IntentPart['kind']): number =>
+    intent.parts!.filter((p) => p.kind === k).reduce((s, p) => s + (p.value ?? 0), 0);
+  const attacks = intent.parts!.filter((p) => p.kind === 'attack');
+  const defends = intent.parts!.filter((p) => p.kind === 'defend');
+  const buffs = intent.parts!.filter((p) => p.kind === 'buff');
+  const debuffs = intent.parts!.filter((p) => p.kind === 'debuff');
+  if (attacks.length) chips.push(`⚔ ${sum('attack')}`);
+  if (defends.length) chips.push(`🛡 ${sum('defend')}`);
+  if (buffs.length) chips.push(`◈${buffs.length > 1 ? `×${buffs.length}` : ''}`);
+  if (debuffs.length) chips.push(`✦${debuffs.length > 1 ? `×${debuffs.length}` : ''}`);
+  return chips.join(' · ');
 };
 
-/** Тултип намерения: что враг сделает на своём ходу. */
-const intentTip = (kind: string, value?: number): string => {
-  switch (kind) {
-    case 'attack': return `Собирается нанести ${value} урона. Закройся блоком!`;
-    case 'defend': return `Готовит ${value} блока. Его атаки будут слабее — копи силу.`;
-    case 'buff': return 'Накладывает усиление на себя.';
-    default: return 'Намерение неясно...';
+/** Тултип: построчный план — что враг сделает на своём ходу. */
+const intentTipLines = (intent: EnemyIntent): string[] => {
+  if (!intent.parts || intent.parts.length === 0) {
+    if (intent.kind === 'unknown') return ['Намерение неясно...'];
+    const v = intent.value !== undefined ? ` ${intent.value}` : '';
+    return [intent.kind === 'attack' ? `Собирается нанести${v} урона.` : intent.kind === 'defend' ? `Готовит${v} блока.` : 'Усиливает себя.'];
   }
+  const lines = intent.parts.map((p) => `«${p.cardName}» — ${p.detail}`);
+  if (intent.parts.some((p) => p.kind === 'attack')) {
+    lines.push('Урон сначала расходует твой блок.');
+  }
+  return lines;
 };
 </script>
 
@@ -51,8 +68,11 @@ const intentTip = (kind: string, value?: number): string => {
         <img v-if="art.artUrl('enemy', e.defId)" :src="art.artUrl('enemy', e.defId)!" alt="" />
         <span v-else>👁</span>
         <span v-if="e.isAlive" class="intent tip-host" :class="e.intent.kind">
-          {{ intentText(e.intent.kind, e.intent.value) }}
-          <span class="tip">{{ intentTip(e.intent.kind, e.intent.value) }}</span>
+          {{ intentBadge(e.intent) }}
+          <span class="tip plan">
+            <b class="plan-title">План хода:</b>
+            <span v-for="(line, i) in intentTipLines(e.intent)" :key="i" class="plan-line">{{ line }}</span>
+          </span>
         </span>
       </div>
       <div class="body">

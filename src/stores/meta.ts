@@ -10,6 +10,7 @@ import { createCard, syncUidCounter } from '@/game/CardFactory';
 import { BRANCHES, computeCombatStats, nextNode } from '@/data/skills';
 import { LORE, type LoreStats } from '@/data/lore';
 import { CRAFT_POOL } from '@/data/cards';
+import { CLASSES, type ClassGift, type ClassId } from '@/data/classes';
 import type { BranchId, CardInstance, CardType, CombatStats, EnemyDefinition } from '@/types';
 
 const SAVE_SLOT = 'profile';
@@ -18,49 +19,46 @@ const LS_KEY = 'eotf:profile';
 /** Сериализуемая часть профиля (то, что лежит в сейве). */
 export interface ProfileData {
   version: 1;
+  /** Класс Пепельного (стартовая колода и бонусы уже применены в коллекции) */
+  classId: ClassId;
+  /** Души — валюта Кузни и Алтаря (внутренний ключ souls сохранён ради сейвов) */
   souls: number;
+  /** Угли — ресурс Горнила (внутренний ключ essences сохранён ради сейвов) */
   essences: number;
   collection: CardInstance[];
   deckUids: string[];
   /** 3 слота пресетов колод (null — пусто) */
   presets: (string[] | null)[];
   skills: Record<BranchId, number>;
+  /** Уровень дара класса (0–10): уникальная пассивка, качается в Алтаре */
+  giftLevel: number;
   stats: { battles: number; victories: number; deaths: number; enemiesSlain: number; soulsEarned: number };
   lore: string[];
   /** Глубина похода: растёт с каждой победой, сбрасывается смертью */
   progress: { depth: number };
-  /** Чекпоинт Акта 1 (узел + флаги + статы): смерть возвращает сюда */
-  storyCheckpoint: import('@/game/StoryEngine').StorySnapshot | null;
-  /** Пепельные осколки — актовая валюта Акта 2 (Рынок, крафт) */
-  ashShards: number;
-  /** Сколько актов пройдено (1 = Акт I done, 2 = Акт II done) */
-  actsCompleted: number;
-  /** Story-статы последнего завершённого акта (переносятся в следующий акт) */
-  storyStats: Record<string, number>;
   /** Туториал первого боя показан */
   tutorialDone: boolean;
   /** Звук выключен (M / кнопка) */
   audioMuted: boolean;
 }
 
-function freshProfile(): ProfileData {
-  // Стартовая коллекция = 10 базовых карт, все сразу в колоде
-  const base = BALANCE.player.startingDeck.map((id) => createCard(id));
+function freshProfile(classId: ClassId = 'courier'): ProfileData {
+  // Стартовая коллекция = колода класса, все карты сразу в колоде
+  const cls = CLASSES[classId];
+  const base = cls.startingDeck.map((id) => createCard(id));
   return {
     version: 1,
+    classId,
     souls: 0,
     essences: 0,
     collection: base,
     deckUids: base.map((c) => c.uid),
     presets: [null, null, null],
-    skills: { strength: 0, dexterity: 0, intellect: 0, endurance: 0, spirit: 0 },
+    skills: { strength: 0, dexterity: 0, intellect: 0, endurance: 0, spirit: 0, ...cls.startSkills },
+    giftLevel: 0,
     stats: { battles: 0, victories: 0, deaths: 0, enemiesSlain: 0, soulsEarned: 0 },
     lore: [],
     progress: { depth: 1 },
-    storyCheckpoint: null,
-    ashShards: 0,
-    actsCompleted: 0,
-    storyStats: {},
     tutorialDone: false,
     audioMuted: false,
   };
@@ -87,13 +85,20 @@ export const useMetaStore = defineStore('meta', {
     totalSkillLevels(state): number {
       return Object.values(state.skills).reduce((a, b) => a + b, 0);
     },
+    /** Дар текущего класса (описание из data/classes). */
+    gift(state): ClassGift {
+      return CLASSES[state.classId].gift;
+    },
+    /** Стоимость следующего уровня дара (0→1 … 9→10), как у узлов ветвей. */
+    giftCost(state): number {
+      return state.giftLevel >= 10 ? Infinity : 30 + 20 * (state.giftLevel + 1);
+    },
     /** Есть ли прогресс для «Продолжить» в главном меню. */
     hasProgress(): boolean {
       return (
         this.souls > 0 ||
         this.collection.length > 10 ||
-        this.totalSkillLevels > 0 ||
-        this.storyCheckpoint !== null
+        this.totalSkillLevels > 0
       );
     },
   },
@@ -114,10 +119,9 @@ export const useMetaStore = defineStore('meta', {
       }
       if (loaded && loaded.version === 1) {
         this.$patch(loaded);
-        // Санитизация: ресурсы не могут быть отрицательными (баг Рынка)
+        // Санитизация: ресурсы не могут быть отрицательными
         if (this.souls < 0) this.souls = 0;
         if (this.essences < 0) this.essences = 0;
-        if (this.ashShards < 0) this.ashShards = 0;
         syncUidCounter(this.collection);
       }
       // Любое дальнейшее изменение → автосохранение
@@ -171,12 +175,12 @@ export const useMetaStore = defineStore('meta', {
       }
     },
 
-    /** Полный сброс профиля («Новая игра» в меню). */
-    resetProfile(): void {
-      this.$patch(freshProfile());
+    /** Полный сброс профиля («Новая игра» в меню): класс задаёт колоду и стартовые навыки. */
+    resetProfile(classId: ClassId = 'courier'): void {
+      this.$patch(freshProfile(classId));
     },
 
-    // ==================== Алтарь душ ====================
+    // ==================== Алтарь ====================
 
     /** Изучить следующий уровень ветви. Возвращает false при нехватке душ/максимуме. */
     learnSkill(branch: BranchId): boolean {
@@ -187,7 +191,15 @@ export const useMetaStore = defineStore('meta', {
       return true;
     },
 
-    // ==================== Кузница ====================
+    /** Пробудить/усилить дар класса (+1 уровень, максимум 10). */
+    learnGift(): boolean {
+      if (this.giftLevel >= 10 || this.souls < this.giftCost) return false;
+      this.souls -= this.giftCost;
+      this.giftLevel += 1;
+      return true;
+    },
+
+    // ==================== Кузня ====================
 
     /** Улучшить карту в коллекции. Максимум — 5 уровней (см. CardFactory). */
     upgradeCard(uid: string): boolean {
@@ -206,7 +218,7 @@ export const useMetaStore = defineStore('meta', {
       return BALANCE.hub.upgradeBaseCost * (card.upgradeLevel + 1);
     },
 
-    // ==================== Мастерская ====================
+    // ==================== Горнило ====================
 
     /** Можно ли платить за крафт. */
     canAffordCraft(): boolean {
@@ -239,7 +251,7 @@ export const useMetaStore = defineStore('meta', {
       this.collection.push(createCard(defId));
     },
 
-    // ==================== Хранилище ====================
+    // ==================== Реликварий ====================
 
     /** Добавить/убрать карту из активной колоды. */
     toggleDeckCard(uid: string): boolean {

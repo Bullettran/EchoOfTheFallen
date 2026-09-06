@@ -66,8 +66,9 @@ export function describeCardHtml(card: Pick<CardInstance, 'defId' | 'upgradeLeve
   if (cur.applyState) {
     const st = cur.applyState;
     const names: Record<string, string> = {
-      burn: 'Горение', poison: 'Отравление', bleed: 'Кровотечение',
-      blessing: 'Благословение', fury: 'Ярость', vulnerable: 'Уязвимость',
+      burn: 'Горение', poison: 'Гниль', bleed: 'Кровотечение',
+      blessing: 'Милость', fury: 'Ярость', vulnerable: 'Пробитая броня',
+      heal_ban: 'Порча',
     };
     const nm = names[st.type] ?? st.type;
     parts.push(`${nm} ${st.stacks}${st.duration ? ` на ${st.duration} х.` : ''} ${st.target === 'self' ? 'на себя' : ''}`.trim());

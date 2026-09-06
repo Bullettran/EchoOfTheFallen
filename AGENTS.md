@@ -1,37 +1,46 @@
 # AGENTS.md — шпаргалка для агентов
 
-Карточная roguelike RPG (Dark Souls стиль). Phaser 4 — сцена боя, Vue 3 + Pinia — весь UI, Electron — десктоп. TypeScript strict.
+Карточный рогалик-декбилдер «Эхо павших» (souls-like: мир сгорел в Великом Пожаре, герой — Пепельный, сосуд душ павших героев; лут — StS). Phaser 4 — сцена боя, Vue 3 + Pinia — весь UI, Electron — десктоп. TypeScript strict.
 
 ## Команды (проверяй после каждого изменения кода)
 
 ```powershell
 pnpm typecheck   # vue-tsc --noEmit — ОБЯЗАТЕЛЬНО зелёный
-pnpm test        # vitest — 58+ тестов, все зелёные
+pnpm test        # vitest — 77 тестов, все зелёные
 pnpm build       # прод-сборка веб-части
 pnpm electron:dev  # запуск игры (dev-сервер + Electron)
 ```
 
-`pnpm install` может потребовать `pnpm approve-builds --all` (pnpm 11, список в `pnpm-workspace.yaml`).
+`pnpm install` может потребовать `pnpm approve-builds --all` (pnpm 11, список в `pnpm-workspace.yaml`). Node — v22 (nvm; на 20 падает jsdom/undici в vitest).
 
 ## Карта проекта (куда что)
 
-- `src/data/` — ТОЛЬКО конфиги (карты/состояния/враги/навыки/лор/сюжет). Без логики.
-- `src/data/story/act1.ts` — граф Акта 1 (узлы/выборы/проверки из History.MD).
-- `src/game/` — чистая логика. `BattleEngine` (мульти-враг, слоты, призывы), `StoryEngine` (узлы, 2d6, флаги, эффекты акта), фабрики. Не знает про Vue/DOM/Phaser. Вывод — через `src/core/EventBus.ts` (mitt). Тестируется без рендера.
-- `src/stores/` — Pinia: `battle` (движок + UI-снапшот), `story` (акт: узлы/броски/награды), `meta` (профиль + автосейв), `ui` (экраны hub|map|battle|story), `art` (реестр картинок).
-- `src/components/` — только отображение; действия через сторы. `StoryScreen` — экран сценария.
+- `src/data/` — ТОЛЬКО конфиги (карты/состояния/враги/навыки/классы/лор). Без логики. Сеттинг меняется здесь; внутренние id — стабильные ключи движка и сейвов, НЕ переименовывать.
+- `src/game/` — чистая логика. `BattleEngine` (мульти-враг, слоты, призывы), фабрики. Не знает про Vue/DOM/Phaser. Вывод — через `src/core/EventBus.ts` (mitt). Тестируется без рендера.
+- `src/stores/` — Pinia: `battle` (движок + UI-снапшот), `trial` (поход: этажи/узлы/магазин/HP рана), `meta` (профиль + автосейв), `ui` (экраны menu|hub|battle|trial), `art` (реестр картинок).
+- `src/components/` — только отображение; действия через сторы. `TrialMapScreen` — карта похода.
 - `src/phaser/scenes/BattleScene.ts` — ТОЛЬКО визуальные эффекты (слушает `vfx:*`). Портреты/фон/иконки берёт из `core/assets.ts`.
 - `electron/` — main + preload. Безопасность: contextIsolation, без nodeIntegration; наружу только `window.gameStorage`.
 - `tests/` — vitest + jsdom; фикстуры в `tests/fixtures.ts`.
-- `src/assets/images/` — весь арт; **имя файла = id сущности** (`skills/strike.jpeg`, `enemies/bone_king.jpeg`, `ui/player.jpeg`). Реестр: `src/core/assets.ts` (`import.meta.glob`, пути — ТОЛЬКО литеральные).
+- `src/assets/images/` — весь арт; **имя файла = id сущности** (`skills/strike.jpeg`, `enemies/collector.jpeg`, `ui/player.jpeg`). Реестр: `src/core/assets.ts` (`import.meta.glob`, пути — ТОЛЬКО литеральные). Сейчас лежат плейсхолдеры — реальные арты кладутся 1:1 по имени.
+
+## Сеттинг (для текстов и арта)
+
+- Герой — Пепельный, классы-сосуды (Странник/Рыцарь/Жрец, `data/classes.ts`: колода + стартовые ветки; id классов старые: courier/welder/companion). Выбор — при «Новой игре» (экран `class_select`). Хаб — «Последний очаг» (сцена `station`). Валюты: **души** (внутр. ключ `souls`) и **угли** (внутр. ключ `essences`).
+- Зоны: Кузня (улучшение карт), Алтарь (навыки), Горнило (крафт), Реликварий, Зал Эха (лор).
+- Состояния: Горение/Гниль/Кровотечение/Милость/Ярость/Пробитая броня/Порча (id старые: burn/poison/bleed/blessing/fury/vulnerable/heal_ban).
+- Ветки Алтаря: Мощь/Ловкость/Разум/Стойкость/Вера (id старые: strength/.../spirit).
+- Локация: Угольные пустоши (тропа/тракт/руины собора/катакомбы/стена/выжженная деревня/тронный зал). Босс — Король-Пепел (id старый: collector). Цель лора — трон Короля-Пепла и Механизм запуска нового мира.
 
 ## Ключевые паттерны
 
 - Новая карта/враг/состояние/узел навыка = запись в соответствующем файле `data/`. Логику не трогать. Подробнее — README, раздел «Как добавить новое».
+- Дар класса — уникальная пассивка (Рыцарь «Шипы»/Странник «Наконечник»/Жрец «Жатва душ»), 0–10, качается в Алтаре (`meta.giftLevel`, `meta.learnGift`). В бой уходит `GiftConfig` (6-й аргумент `BattleEngine`); механики — в `playCard`/`dealAttackDamage`/`checkDeath`.
 - Все балансные числа — в `src/core/config.ts` (`BALANCE`). Не хардкодить в логике.
-- Урон состояний игнорирует блок. Модификаторы: `(base + Сила) × ярость × уязвимость × ульта`.
+- Урон состояний игнорирует блок. Модификаторы: `(base + Мощь) × ярость × пробитая броня × ульта`.
 - Ход врага пошаговый: `beginEnemyTurn() → executeEnemyStep()×N → finishEnemyTurn()` — стор дёргает шаги по таймеру ради анимаций.
-- Сохранения: `meta-store` автосейв через `$subscribe`; Electron IPC `gameStorage`, в браузере — localStorage. Слот `profile`.
+- Походной режим: карта-граф (StS-лайк) — вся генерится сразу (`genMap`), 15 этажей по 2–4 узла, рёбра-тропы без пересечений; с последнего этажа → босс. Выбор — только соседи по тропе (`trial.reachableIds`, `lastClearedId`); завершение узла (`trial.clearNodeById`) двигает позицию. Узлы: бой/элита/находка/костёр/торговец/святыня (благословение на ран, `SHRINE_POOL`)/тлен (проклятие+награда, `CURSE_POOL`)/босс. Модификаторы похода — `trial.runMods` (старт-блок/добор/лечение/души/урон врагов), сливаются со статами в `battle.startTrialBattle`. Награды боёв в походе начисляет `trial.onBattleEnd`, не battle-store. Подсказки узлов — `NODE_META` в `stores/trial.ts` (единственный источник имён/иконок/описаний).
+- Сохранения: `meta-store` автосейв через `$subscribe`; Electron IPC `gameStorage`, в браузере — localStorage. Слот `profile`. Старые сейвы с сюжетными полями грузятся безопасно (лишние ключи игнорируются).
 
 ## Грабли (не наступать повторно)
 
@@ -42,8 +51,15 @@ pnpm electron:dev  # запуск игры (dev-сервер + Electron)
 5. **Окружение**: AppLocker блокирует неподписанные нативные модули → Vite 6 (не 8), TS 5.9 (не 7). Не «обновляй» без проверки сборки.
 6. **Vue-стор из не-компонентного кода** — передавать pinia: `useStore(pinia)`.
 7. Тестовые враги: колода ≥ 3 разных карт, иначе револьвер сброса порождает дубликаты в доборе.
+8. Русские тексты состояний дублируются в трёх местах: `data/states.ts` (имя), `stores/battle.ts` `stateName()`, `game/CardFactory.ts` `describeCardHtml()`. Переименовал состояние — проверь все три.
 
 ## E2E через Playwright MCP
 
 - Маркеры готовности сцены: `canvas.dataset` → `bgLoaded`, `enemyLoaded`, `enemySize`, `playerLoaded`.
 - Ассеты: все `<img>` — `naturalWidth > 0`; отсутствие — упадёт `tests/art.store.test.ts` с именем файла.
+
+## Арт-пайплайн
+
+- Генерация: `node scripts/gen-art.cjs` (Pollinations/FLUX, без ключей; `--force` перегенерить, `--only=id1,id2`, `--dirs=skills,ui`). Промпты: `artPrompt` в `data/cards.ts`/`data/enemies.ts` + реестры сцен/иконок/UI в самом скрипте.
+- Единый стиль «Пепел и угли» + кадрирование по типу (`DIR_STYLE` в скрипте): враги — персонажная карточка, скиллы — экшен-крупный план, сцены — широкий кадр, иконки — читаемость в малом. Меняешь стиль — меняй `STYLE`/`DIR_STYLE` и перегенерь `--force`.
+- Каталог карт для людей: `docs/cards.md`. Хранение карт — TS-реестр (`src/data/cards.ts`), НЕ JSON; в сейвах — только `{uid, defId, upgradeLevel}`.

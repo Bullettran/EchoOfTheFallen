@@ -1,0 +1,62 @@
+.inspect {
+  position: fixed; top: 50%; right: 0; transform: translateY(-50%);
+  width: 300px; max-height: 86vh; overflow-y: auto;
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 2px solid; border-right: none;
+  border-radius: 14px 0 0 14px;
+  padding: 18px 18px 16px;
+  z-index: 60;
+  box-shadow: -14px 0 34px rgba(0, 0, 0, 0.65);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.close {
+  position: absolute; top: 8px; right: 10px;
+  background: transparent; border: none; color: var(--faint);
+  font-size: 16px; cursor: pointer; padding: 4px;
+}
+.close:hover { color: var(--blood-bright); }
+
+.art {
+  width: 148px; height: 148px; margin: 0 auto; flex: none;
+  background: #0a0806; border: 1px solid rgba(0, 0, 0, 0.7); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  font-size: 30px; color: rgba(201, 168, 106, 0.35);
+}
+.art img { width: 100%; height: 100%; object-fit: contain; filter: saturate(0.95) contrast(1.03); }
+
+.name { font-family: var(--font-serif); font-size: 18px; color: var(--text-bright); text-align: center; }
+.up { color: #7dd87d; }
+.meta {
+  display: flex; justify-content: center; gap: 10px;
+  font-size: 12.5px; color: var(--dim);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.cost { color: var(--gold-bright); text-transform: none; }
+
+.desc {
+  font-size: 14px; color: #cfc3ad; line-height: 1.45; text-align: center;
+  background: rgba(10, 8, 6, 0.55); border: 1px solid var(--border-soft);
+  border-radius: 8px; padding: 10px 12px;
+}
+
+.upgrade-block {
+  border-top: 1px solid var(--border-soft); padding-top: 10px;
+  display: flex; flex-direction: column; gap: 6px; text-align: center;
+}
+.u-title { font-size: 12.5px; color: var(--faint); text-transform: uppercase; letter-spacing: 1px; }
+.u-gain { font-size: 13.5px; color: var(--dim); }
+.plus { color: #7dd87d; }
+.u-btn {
+  font-family: var(--font-serif); font-size: 15px; padding: 9px 16px;
+  background: #241b16; color: #ffe9b0;
+  border: 1px solid var(--gold); border-radius: 8px; cursor: pointer;
+}
+.u-btn:hover { box-shadow: 0 0 14px rgba(255, 215, 122, 0.25); }
+.u-max { color: var(--gold-bright); font-size: 13px; }
+.u-hint { color: var(--faint); font-size: 12.5px; font-style: italic; }
+.u-none { color: var(--faint); font-size: 13px; }
+
+/* Выезд панели справа */
+.slide-enter-active, .slide-leave-active { transition: transform 0.25s ease, opacity 0.2s ease; }
+.slide-enter-from, .slide-leave-to { transform: translateY(-50%) translateX(110%); opacity: 0.4; }

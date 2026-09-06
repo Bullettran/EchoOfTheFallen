@@ -18,21 +18,21 @@ const orbEmpty = uiUrl('orb_empty');
     <div class="portrait tip-host">
       <img v-if="portrait" :src="portrait" alt="" />
       <span v-else>👤</span>
-      <span class="tip">Павший — это ты. Держи HP выше нуля: ноль — смерть и возврат в убежище.</span>
+      <span class="tip">Пепельный — это ты. Держи HP выше нуля: ноль — угасание и возврат в Последний очаг.</span>
     </div>
     <div class="body">
       <div class="name-row">
         <span class="name">{{ store.player.name }}</span>
         <span v-if="store.player.block > 0" class="block tip-host">
           🛡 {{ store.player.block }}
-          <span class="tip">Блок: поглощает урон до начала твоего следующего хода. Не защищает от Горения и Яда.</span>
+          <span class="tip">Блок: поглощает урон до начала твоего следующего хода. Не защищает от Горения и Гнили.</span>
         </span>
       </div>
       <div class="bar hp tip-host">
         <div class="ghost" :style="{ width: `${(store.player.hp / store.player.maxHp) * 100}%` }" />
         <div class="fill" :style="{ width: `${(store.player.hp / store.player.maxHp) * 100}%` }" />
         <span class="bar-text">{{ store.player.hp }} / {{ store.player.maxHp }}</span>
-        <span class="tip">Здоровье. Урон врага и Горение/Яд снижают его. Ниже 30% экран пульсирует красным.</span>
+        <span class="tip">Жизненная сила. Урон врага и Горение/Гниль снижают её. Ниже 30% экран пульсирует красным.</span>
       </div>
       <div v-if="store.player.states.length" class="states">
         <span

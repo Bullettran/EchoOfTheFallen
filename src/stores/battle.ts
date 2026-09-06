@@ -10,12 +10,12 @@ import { defineStore } from 'pinia';
 import { BALANCE } from '@/core/config';
 import { eventBus } from '@/core/EventBus';
 import { BattleEngine, type BattlePhase, type EnemyStep } from '@/game/BattleEngine';
-import { scaleEnemy } from '@/game/EnemyFactory';
-import { getEnemyDefinition } from '@/game/EnemyFactory';
 import { getCardDefinition, cardCost } from '@/game/CardFactory';
+import { CLASSES } from '@/data/classes';
 import { useMetaStore, type BattleReward } from '@/stores/meta';
 import { useUiStore } from '@/stores/ui';
-import type { CardType, Combatant, EnemyDefinition, EnemyIntent, StateInstance } from '@/types';
+import type { RunModifiers } from '@/stores/trial';
+import type { CardInstance, CardType, Combatant, EnemyDefinition, EnemyIntent, StateInstance } from '@/types';
 
 /** UI-представление карты в руке (definition + instance слиты для рендера). */
 export interface HandCardView {
@@ -71,9 +71,9 @@ export const useBattleStore = defineStore('battle', {
     enemyLevel: 1,
     enemyPhaseName: null as string | null,
     isBossFight: false,
-    /** Бой запущен из сценария (результат вернётся в StoryEngine) */
-    storyContext: null as string | null,
-    /** Смерть в сценарном бою уже обработана (сброс глубины) */
+    /** Бой запущен из похода (результат вернётся в trial-store) */
+    trialMode: false,
+    /** Смерть в походном бою уже обработана (сброс глубины) */
     deathHandled: false,
   }),
 
@@ -92,34 +92,49 @@ export const useBattleStore = defineStore('battle', {
   },
 
   actions: {
-    /** Начать бой с врагом (defId), масштабированным под текущую глубину. */
-    startBattle(defId: string): void {
+    /**
+     * Походный бой: походная колода + сохранение HP между узлами.
+     * Награды начисляет trial-store, не meta напрямую.
+     */
+    startTrialBattle(
+      defs: EnemyDefinition[],
+      deck: CardInstance[],
+      currentHp: number,
+      maxHp: number,
+      _isElite: boolean,
+      dmgBonus: number,
+      runMods?: RunModifiers,
+    ): void {
       const meta = useMetaStore();
       const ui = useUiStore();
-      const scaled = scaleEnemy(defId, meta.progress.depth);
 
-      const deck = meta.activeDeckCards;
-      if (deck.length < BALANCE.hub.minDeck) return; // кнопка похода не должна этого допускать
-
-      this.currentEnemyDefs = [scaled.def];
-      this.rewarded = false;
+      this.currentEnemyDefs = defs;
+      this.rewarded = true; // награда через trial-store
       this.deathHandled = false;
       this.lastReward = null;
-      this.storyContext = null;
+      this.trialMode = true;
       this.selectedTargetId = null;
-      this.enemyLevel = scaled.def.level;
-      this.isBossFight = Boolean(scaled.def.boss);
-      this.enemyPhaseName = scaled.def.boss?.phases[0]?.name ?? null;
-      const engine = new BattleEngine(
-        BALANCE.player.maxHp,
-        deck,
-        scaled.def,
-        meta.combatStats,
-        scaled.dmgBonus,
-      );
+      this.enemyLevel = defs[0]?.level ?? 1;
+      this.isBossFight = defs.some((d) => d.boss);
+      this.enemyPhaseName = defs[0]?.boss?.phases[0]?.name ?? null;
+
+      // Движок с походным HP и колодой + дар класса + модификаторы похода
+      const base = meta.combatStats;
+      const stats = {
+        ...base,
+        maxHpBonus: maxHp - BALANCE.player.maxHp,
+        startBlock: base.startBlock + (runMods?.startBlock ?? 0),
+        cardsPerTurnBonus: base.cardsPerTurnBonus + (runMods?.cardsPerTurnBonus ?? 0),
+        healMultBonus: base.healMultBonus + (runMods?.healMultBonus ?? 0),
+      };
+      const gift = meta.giftLevel > 0
+        ? { id: CLASSES[meta.classId].gift.id, level: meta.giftLevel }
+        : undefined;
+      const engine = new BattleEngine(BALANCE.player.maxHp, deck, defs, stats, dmgBonus, gift);
+      engine.player.hp = currentHp; // сохранение HP между боями
       this.engine = engine;
       this.battleLog = [];
-      this.pushLog(`Из тьмы выходит ${scaled.def.name}...`, 'info');
+      this.pushLog(`Из пепла восстаёт ${defs.map((d) => d.name).join(', ')}...`, 'info');
       engine.start();
       ui.setScreen('battle');
       this.sync();
@@ -133,43 +148,6 @@ export const useBattleStore = defineStore('battle', {
         this.selectedTargetId = id;
         eventBus.emit('battle:targetSelected', { targetId: id });
       }
-    },
-
-    /**
-     * Сценарный бой (из StoryEngine): без скейла глубины; награды начисляет
-     * story-узел, поэтому обычное начисление отключено (rewarded=true).
-     * @param combatBonus эффекты акта (Связь: выживание; Обет: +урон боссу)
-     */
-    startStoryBattle(defIds: string[], combatBonus?: Partial<import('@/types').CombatStats>): void {
-      const meta = useMetaStore();
-      const ui = useUiStore();
-      const defs = defIds.map((id) => getEnemyDefinition(id));
-
-      const deck = meta.activeDeckCards;
-      if (deck.length < BALANCE.hub.minDeck) return;
-
-      this.currentEnemyDefs = defs;
-      this.rewarded = true; // награда придёт из сценария
-      this.deathHandled = false;
-      this.lastReward = null;
-      this.storyContext = 'story';
-      this.selectedTargetId = null;
-      this.enemyLevel = defs[0]?.level ?? 1;
-      this.isBossFight = defs.some((d) => d.boss);
-      this.enemyPhaseName = defs[0]?.boss?.phases[0]?.name ?? null;
-      const engine = new BattleEngine(
-        BALANCE.player.maxHp,
-        deck,
-        defs,
-        { ...meta.combatStats, ...combatBonus },
-        0,
-      );
-      this.engine = engine;
-      this.battleLog = [];
-      this.pushLog(`Из тьмы выходит ${defs.map((d) => d.name).join(', ')}...`, 'info');
-      engine.start();
-      ui.setScreen('battle');
-      this.sync();
     },
 
     playCard(uid: string): void {
@@ -296,7 +274,7 @@ export const useBattleStore = defineStore('battle', {
             meta.onDefeat();
           }
         } else if (this.phase === 'defeat' && !this.deathHandled) {
-          // Сценарный бой: наград нет, но смерть есть смерть — сброс глубины
+          // Походный бой: наград нет, но смерть есть смерть — сброс глубины
           this.deathHandled = true;
           useMetaStore().onDefeat();
         }
@@ -340,11 +318,12 @@ export function wireBattleLog(): void {
 function stateName(s: StateInstance): string {
   const names: Record<string, string> = {
     burn: `Горение ${s.stacks}`,
-    poison: `Отравление ${s.stacks}`,
+    poison: `Гниль ${s.stacks}`,
     bleed: `Кровотечение ${s.stacks}`,
-    blessing: `Благословение ${s.stacks}`,
+    blessing: `Милость ${s.stacks}`,
     fury: 'Ярость',
-    vulnerable: 'Уязвимость',
+    vulnerable: 'Пробитая броня',
+    heal_ban: 'Порча',
   };
   return names[s.type] ?? s.type;
 }

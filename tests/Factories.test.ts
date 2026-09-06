@@ -10,6 +10,7 @@ import {
   describeCardHtml,
 } from '@/game/CardFactory';
 import { scaleEnemy, rollEncounters } from '@/game/EnemyFactory';
+import { BALANCE } from '@/core/config';
 
 describe('CardFactory', () => {
   it('resolveCardAction применяет улучшения качественно', () => {
@@ -28,7 +29,7 @@ describe('CardFactory', () => {
     const plain = describeCardHtml({ defId: 'strike', upgradeLevel: 0 });
     expect(plain).not.toContain('(+');
     // композитная карта: урон + состояние
-    const fb = describeCardHtml({ defId: 'fireball', upgradeLevel: 2 }); // 4+2=6, горение 3
+    const fb = describeCardHtml({ defId: 'fireball', upgradeLevel: 2 }); // 4+2=6, перегрев 3
     expect(fb).toContain('6');
     expect(fb).toContain('(+2)');
     expect(fb).toContain('Горение');
@@ -56,24 +57,24 @@ describe('CardFactory', () => {
 
 describe('EnemyFactory: скейлинг глубины', () => {
   it('глубина 1 не меняет врага', () => {
-    const s = scaleEnemy('fallen_soldier', 1);
-    expect(s.def.maxHp).toBe(44); // 42 × 1.05 (баланс сохранения руки)
+    const s = scaleEnemy('lost_passerby', 1);
+    expect(s.def.maxHp).toBe(44);
     expect(s.def.soulsDrop).toBe(60);
     expect(s.dmgBonus).toBe(0);
   });
 
-  it('глубина 5 усиливает HP/души/эссенции/урон', () => {
-    const s = scaleEnemy('fallen_soldier', 5);
+  it('глубина 5 усиливает HP/души/угли/урон', () => {
+    const s = scaleEnemy('lost_passerby', 5);
     expect(s.def.maxHp).toBe(Math.round(44 * (1 + 0.12 * 4))); // 65
     expect(s.def.soulsDrop).toBe(Math.round(60 * (1 + 0.25 * 4))); // 120
     expect(s.def.essenceChance).toBeCloseTo(0.3 + 0.04 * 4);
     expect(s.dmgBonus).toBe(2);
     // базовый реестр не мутирован
-    expect(scaleEnemy('fallen_soldier', 1).def.maxHp).toBe(44);
+    expect(scaleEnemy('lost_passerby', 1).def.maxHp).toBe(44);
   });
 
-  it('шанс эссенции не превышает потолок 60%', () => {
-    expect(scaleEnemy('fallen_soldier', 50).def.essenceChance).toBeLessThanOrEqual(0.6);
+  it('шанс памяти не превышает потолок 60%', () => {
+    expect(scaleEnemy('lost_passerby', 50).def.essenceChance).toBeLessThanOrEqual(0.6);
   });
 
   it('rollEncounters: 3 РАЗНЫХ обычных врага', () => {
@@ -84,10 +85,10 @@ describe('EnemyFactory: скейлинг глубины', () => {
     options.forEach((o) => expect(o.def.boss).toBeUndefined());
   });
 
-  it('rollEncounters: босс на глубине, кратной 5', () => {
-    const options = rollEncounters(5);
+  it('rollEncounters: босс на глубине, кратной bossEveryDepth (15)', () => {
+    const options = rollEncounters(BALANCE.progression.bossEveryDepth);
     expect(options).toHaveLength(1);
     expect(options[0]!.def.boss).toBeDefined();
-    expect(options[0]!.def.id).toBe('bone_king');
+    expect(options[0]!.def.id).toBe('collector');
   });
 });

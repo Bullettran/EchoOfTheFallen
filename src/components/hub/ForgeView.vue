@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Кузница: улучшение карт коллекции за души.
+ * Кузня: улучшение карт коллекции за души.
  * Прирост за уровень задаётся data (upgradePerLevel), стоимость — BALANCE.hub.
  */
 import { computed, ref } from 'vue';

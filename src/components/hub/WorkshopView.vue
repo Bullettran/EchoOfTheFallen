@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Мастерская: создание карт за души + эссенции.
+ * Горнило: создание новых карт за души + угли.
  * Флоу: выбор типа → 3 случайных варианта → выбор одного.
  */
 import { ref } from 'vue';
@@ -37,10 +37,10 @@ const craft = (defId: string): void => {
   <div class="workshop">
     <div class="intro">
       <p>
-        Из осколков чужих душ куется новая. Цена:
-        <span class="price">{{ BALANCE.hub.craftSoulCost }} душ + {{ BALANCE.hub.craftEssenceCost }} эссенция</span>.
+        Из переплавленных душ и чужих углей рождается новая реликвия. Цена:
+        <span class="price">{{ BALANCE.hub.craftSoulCost }} душ + {{ BALANCE.hub.craftEssenceCost }} уголёк</span>.
         У вас: <span class="res">{{ meta.souls }} душ</span> ·
-        <span class="res">{{ meta.essences }} эссенций</span>
+        <span class="res">{{ meta.essences }} углей</span>
       </p>
     </div>
 
@@ -54,12 +54,12 @@ const craft = (defId: string): void => {
         {{ t.label }}
       </button>
       <p v-if="!meta.canAffordCraft()" class="hint">
-        Не хватает ресурсов — эссенции падают с побеждённых врагов.
+        Не хватает ресурсов — угли выпадают из павших врагов.
       </p>
     </div>
 
     <div v-else class="options">
-      <p class="choose">Призраки предлагают — выберите один:</p>
+      <p class="choose">Горнило предлагает — выберите одно:</p>
       <div class="cards">
         <div
           v-for="defId in options"

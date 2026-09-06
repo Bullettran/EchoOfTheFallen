@@ -97,11 +97,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
         :key="card.uid"
         class="card"
         :class="{ unplayable: !card.playable, framed: Boolean(frame) }"
-        :style="[
-          fanStyle(i),
-          frame ? {} : { borderColor: rarityColor[card.rarity] },
-          frame ? { backgroundImage: `url(${frame})` } : {},
-        ]"
+        :style="[fanStyle(i), frame ? { borderImageSource: `url(${frame})` } : { borderColor: rarityColor[card.rarity] }]"
         @click="playCard($event, card.uid)"
       >
         <div class="cost">{{ card.cost }}</div>

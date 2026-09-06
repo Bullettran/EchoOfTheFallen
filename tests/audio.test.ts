@@ -25,7 +25,6 @@ describe('audio: фоновая музыка', () => {
     expect(bgForScreen('menu')).toBe('begin-no-license');
     expect(bgForScreen('battle')).toBe('begin-no-license');
     expect(bgForScreen('hub')).toBe('hub-no-license');
-    expect(bgForScreen('story')).toBe('hub-no-license');
-    expect(bgForScreen('act_complete')).toBe('begin-no-license');
+    expect(bgForScreen('trial')).toBe('hub-no-license');
   });
 });

@@ -84,7 +84,7 @@ describe('meta-store', () => {
     expect(m.souls).toBe(50);
   });
 
-  // ---------- Хранилище ----------
+  // ---------- Реликварий ----------
 
   it('toggleDeckCard: нельзя выйти за границы 10..30', () => {
     const m = useMetaStore();
