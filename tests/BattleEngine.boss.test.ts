@@ -199,9 +199,9 @@ describe('BattleEngine: босс и смерть', () => {
     e.start();
     expect(e.hand.length).toBe(5);
     expect(e.drawPile.length).toBe(5);
-    // играем 2 карты
-    playByDefId(e, 'strike');
-    playByDefId(e, 'guard');
+    // играем 2 любые карты (рука перемешана — не привязываемся к типу)
+    expect(e.playCard(e.hand[0]!.uid)).toBe(true);
+    expect(e.playCard(e.hand[0]!.uid)).toBe(true);
     expect(e.hand.length).toBe(3);
     e.endPlayerTurn();
     e.beginEnemyTurn();

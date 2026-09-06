@@ -1,4 +1,4 @@
-﻿// Диагностика боя: поднимает vite, открывает бой, проверяет кликабельность
+// Диагностика боя: поднимает vite, открывает бой, проверяет кликабельность
 // карт и границы элементов. Запуск: node scripts/e2e-click.cjs
 const { spawn } = require('node:child_process');
 const { chromium } = require('playwright');

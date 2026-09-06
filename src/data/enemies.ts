@@ -122,7 +122,7 @@ export const ENEMIES: Record<string, EnemyDefinition> = {
     artPrompt: 'small crawling ash imp made of cinders and bone splinters, claws clutching a stolen trinket, darting low pose',
   },
 
-  // ---------- Босс ----------
+  // ---------- Боссы ----------
   collector: {
     id: 'collector',
     name: 'Король-Пепел',
@@ -150,6 +150,56 @@ export const ENEMIES: Record<string, EnemyDefinition> = {
     },
     artPrompt: 'colossal Ash King towering from a throne of cinders: crown of melted swords fused to his skull, robes of grey ash flowing like smoke, one hand radiating pale soul-flame, dead burning world behind, boss arena',
   },
+  ash_priestess: {
+    id: 'ash_priestess',
+    name: 'Жрица Пепла',
+    scene: 'ruined_cathedral',
+    maxHp: 78,
+    level: 5,
+    aiStyle: 'tactical',
+    deck: ['boss_decree', 'enemy_smite', 'enemy_mend', 'boss_ossuary', 'enemy_hex'],
+    soulsDrop: 230,
+    essenceChance: 1.0,
+    boss: {
+      phases: [
+        { name: 'Тихое пение', hpThresholdPct: 100 },
+        {
+          name: 'Хор пепла',
+          hpThresholdPct: 55,
+          summon: { defId: 'scavenger_drone', name: 'Пепельный прислужник', hp: 14, count: 2, deck: ['shadow_hit'] },
+        },
+      ],
+      ritual: {
+        everyTurns: 4,
+        label: 'Печать безмолвия',
+        action: { applyState: { type: 'heal_ban', stacks: 1, duration: 1, target: 'enemy' } },
+      },
+    },
+    artPrompt: 'ash priestess floating above cathedral ruins: habit of fused candlewax and grey ash, faceless veil with glowing cracks, arms spread in silent hymn, ring of pale candles orbiting her, boss arena',
+  },
+  ash_forger: {
+    id: 'ash_forger',
+    name: 'Кузнец Пепла',
+    scene: 'ash_tract',
+    maxHp: 92,
+    level: 5,
+    aiStyle: 'defensive',
+    deck: ['boss_bone_smash', 'boss_ossuary', 'enemy_guard', 'boss_decree', 'enemy_smite'],
+    soulsDrop: 240,
+    essenceChance: 1.0,
+    boss: {
+      phases: [
+        { name: 'Раскалённый молот', hpThresholdPct: 100 },
+        { name: 'Закалка', hpThresholdPct: 50, onEnter: { block: 10 } },
+      ],
+      ritual: {
+        everyTurns: 3,
+        label: 'Подпитка горна',
+        action: { heal: 6 },
+      },
+    },
+    artPrompt: 'colossal ash forger before a portable forge: soot-black apron fused to skin, arms of hammered iron, dragging a glowing anvil on chains, embers swirling with each breath, boss arena',
+  },
 };
 
 /** Пул обычных врагов для генерации узлов похода. */
@@ -164,5 +214,5 @@ export const NORMAL_ENEMY_POOL: string[] = [
 /** Элитные враги (узлы «Лютый враг»). */
 export const ELITE_ENEMY_POOL: string[] = ['laundry_unit', 'lost_courier', 'welder_bot'];
 
-/** Боссы (глубина, кратная BALANCE.progression.bossEveryDepth). */
-export const BOSS_POOL: string[] = ['collector'];
+/** Боссы (последний этаж карты; случайный на каждый поход). */
+export const BOSS_POOL: string[] = ['collector', 'ash_priestess', 'ash_forger'];

@@ -36,14 +36,22 @@ const intentBadge = (intent: EnemyIntent): string => {
 
 /** Тултип: построчный план — что враг сделает на своём ходу. */
 const intentTipLines = (intent: EnemyIntent): string[] => {
+  const lines: string[] = [];
   if (!intent.parts || intent.parts.length === 0) {
     if (intent.kind === 'unknown') return ['Намерение неясно...'];
     const v = intent.value !== undefined ? ` ${intent.value}` : '';
-    return [intent.kind === 'attack' ? `Собирается нанести${v} урона.` : intent.kind === 'defend' ? `Готовит${v} блока.` : 'Усиливает себя.'];
+    lines.push(intent.kind === 'attack' ? `Собирается нанести${v} урона.` : intent.kind === 'defend' ? `Готовит${v} блока.` : 'Усиливает себя.');
+  } else {
+    lines.push(...intent.parts.map((p) => `«${p.cardName}» — ${p.detail}`));
   }
-  const lines = intent.parts.map((p) => `«${p.cardName}» — ${p.detail}`);
-  if (intent.parts.some((p) => p.kind === 'attack')) {
-    lines.push('Урон сначала расходует твой блок.');
+  // Превью блока: сколько урона дойдёт до HP при ТЕКУЩЕМ блоке игрока
+  const attacks = intent.parts?.filter((p) => p.kind === 'attack') ?? (intent.kind === 'attack' ? [{ value: intent.value }] : []);
+  const dmg = attacks.reduce((s, p) => s + (p.value ?? 0), 0);
+  if (dmg > 0) {
+    const block = store.player?.block ?? 0;
+    lines.push(block > 0
+      ? `Твой блок ${block} погасит часть — в HP уйдёт ${Math.max(0, dmg - block)}.`
+      : 'Блока нет — весь урон пойдёт в HP.');
   }
   return lines;
 };

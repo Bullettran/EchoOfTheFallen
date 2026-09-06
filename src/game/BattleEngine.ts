@@ -206,6 +206,8 @@ export class BattleEngine {
     const idx = this.hand.findIndex((c) => c.uid === uid);
     if (idx === -1) return false;
     const card = this.hand[idx]!;
+    const cardDef = getCardDefinition(card.defId);
+    if (cardDef.curse) return false; // проклятые карты не играются
     const cost = cardCost(card);
     if (cost > this.energy) return false;
 
@@ -214,7 +216,6 @@ export class BattleEngine {
 
     this.energy -= cost;
     this.hand.splice(idx, 1);
-    const cardDef = getCardDefinition(card.defId);
     const attackTag = cardDef.tags[0]; // тег канала урона — для резистов
     let act = resolveCardAction(card);
     // Дар Странника «Наконечник»: первая атака хода бьёт сильнее
@@ -378,6 +379,11 @@ export class BattleEngine {
     this.player.block = 0;
     this.energy = BALANCE.player.energyPerTurn + this.stats.energyPerTurnBonus;
     this.firstStrikeUsed = false;
+    // Перк 10+ «Наконечника»: в первый ход боя сосуд горит ярче — +1 энергия
+    if (this.gift?.id === 'first_strike' && this.gift.level >= 10 && this.turn === 0) {
+      this.energy += 1;
+      eventBus.emit('log:message', { text: 'Наконечник: +1 энергия в первый ход', kind: 'state' });
+    }
     const cardsPerTurn = BALANCE.player.cardsPerTurn + this.stats.cardsPerTurnBonus;
 
     // Добор руки ДО cardsPerTurn (несыгранные карты сохраняются для комбинаций)
@@ -393,6 +399,15 @@ export class BattleEngine {
     }
 
     eventBus.emit('turn:playerStart', { turn: this.turn });
+
+    // Проклятие «Пепельная смола»: −2 HP за каждую копию в руке
+    const tarCount = this.hand.filter((c) => c.defId === 'curse_tar').length;
+    if (tarCount > 0) {
+      const tarDmg = 2 * tarCount;
+      eventBus.emit('log:message', { text: `Пепельная смола: −${tarDmg} HP`, kind: 'damage' });
+      this.dealStateDamage(this.player, tarDmg);
+      if (this.checkDeath()) return;
+    }
 
     // Намерения: полное превью плана (все карты хода) без мутации слота.
     // Пробитая броня игрока учитывается, только если доживёт до хода врага
@@ -549,9 +564,14 @@ export class BattleEngine {
       this.gift?.id === 'thorns' &&
       attacker.hp > 0
     ) {
-      const thorns = this.gift.level;
+      const lvl = this.gift.level;
+      const thorns = lvl >= 10 ? Math.floor(lvl * 1.5) : lvl;
       eventBus.emit('log:message', { text: `Шипы: ${attacker.name} −${thorns} HP`, kind: 'state' });
       this.dealStateDamage(attacker, thorns); // игнорирует блок по определению
+      // Перк 5+: отражение разбивает броню атакующего
+      if (lvl >= 5) {
+        this.applyState(attacker, { type: 'vulnerable', stacks: 1, duration: 2 });
+      }
     }
   }
 
@@ -584,6 +604,7 @@ export class BattleEngine {
       });
       if (next.onEnter) {
         if (next.onEnter.heal) this.heal(slot.unit, next.onEnter.heal);
+        if (next.onEnter.block) this.gainBlock(slot.unit, next.onEnter.block);
         if (next.onEnter.applyState) {
           this.applyState(slot.unit, {
             type: next.onEnter.applyState.type,
@@ -735,8 +756,11 @@ export class BattleEngine {
       for (const slot of this.enemySlots) {
         if (slot.unit.hp <= 0 && !slot.harvestDone) {
           slot.harvestDone = true;
-          this.heal(this.player, this.gift.level); // уважает Порчу (heal_ban)
-          eventBus.emit('log:message', { text: `Жатва душ: +${this.gift.level} HP`, kind: 'heal' });
+          const lvl = this.gift.level;
+          const amount = lvl >= 10 ? Math.floor(lvl * 1.5) : lvl; // перк 10+: жатва щедрее
+          this.heal(this.player, amount); // уважает Порчу (heal_ban)
+          if (lvl >= 5) this.gainBlock(this.player, 2); // перк 5+: +2 блока при жатве
+          eventBus.emit('log:message', { text: `Жатва душ: +${amount} HP`, kind: 'heal' });
         }
       }
     }

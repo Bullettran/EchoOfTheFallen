@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 /**
  * BattleScreen — Hearthstone-раскладка:
  *   верх: карточки врагов по центру (ход слева, лог справа)
@@ -74,6 +74,7 @@ onBeforeUnmount(() => {
   eventBus.off('vfx:heal', onHeal);
   eventBus.off('vfx:block', onBlock);
   eventBus.off('vfx:state', onState);
+  store.abortEnemyTurn(); // таймеры хода врага не должны тикать в мёртвом экране
 });
 
 // ---- Туториал ----
@@ -120,6 +121,7 @@ const nextTutorial = (): void => {
         <div class="right-bottom">
           <div v-if="store.mercyAvailable" class="mercy">
             <span class="mercy-text">Он больше не сражается...</span>
+            <span class="mercy-tip">Пощада: половина душ, но +1 очко милосердия (скидка торговца)</span>
             <button class="mercy-btn" @click="store.spareEnemy()">🤝 Пощадить</button>
           </div>
           <button class="end-turn" :class="{ ready: store.isPlayerTurn }" :disabled="!store.isPlayerTurn" @click="store.endTurn()">
@@ -128,26 +130,26 @@ const nextTutorial = (): void => {
         </div>
       </div>
 
-      <!-- Экран завершения боя -->
-      <div v-if="store.battleOver" class="game-over">
-        <div class="panel">
-          <div class="ornament">✦ ──── ✦ ──── ✦</div>
-          <h2 :class="{ spared: store.phase === 'spared' }">
-            {{ store.phase === 'victory' ? 'ПОБЕДА' : store.phase === 'spared' ? 'ПОЩАДА' : 'ВЫ УГАСЛИ' }}
-          </h2>
-          <p v-if="store.phase === 'spared'" class="souls">Он опускает оружие. Пепел медленно оседает на землю.</p>
-          <p v-else-if="store.phase === 'victory'" class="souls">Враг рассыпается пеплом. Можно собрать души.</p>
-          <p v-else class="souls">Уголёк гаснет... но Последний очаг воскресит тебя.</p>
+          <!-- Экран завершения боя -->
+          <div v-if="store.battleOver" class="game-over">
+            <div class="panel">
+              <div class="ornament">✦ ──── ✦ ──── ✦</div>
+              <h2 :class="{ spared: store.phase === 'spared' }">
+                {{ store.phase === 'victory' ? 'ПОБЕДА' : store.phase === 'spared' ? 'ПОЩАДА' : 'ВЫ УГАСЛИ' }}
+              </h2>
+              <p v-if="store.phase === 'spared'" class="souls">Он опускает оружие. Пепел медленно оседает на землю.</p>
+              <p v-else-if="store.phase === 'victory'" class="souls">Враг рассыпается пеплом. Можно собрать души.</p>
+              <p v-else class="souls">Уголёк гаснет... но Последний очаг воскресит тебя.</p>
 
-          <!-- Походный бой: возврат на карту -->
-          <div class="buttons">
-            <button
-              v-if="store.phase !== 'defeat'"
-              class="primary"
-              @click="trial.onBattleEnd('victory', store.player?.hp ?? 0)"
-            >
-              Продолжить поход
-            </button>
+            <!-- Походный бой: возврат на карту -->
+            <div class="buttons">
+              <button
+                v-if="store.phase !== 'defeat'"
+                class="primary"
+                @click="trial.onBattleEnd(store.phase === 'spared' ? 'spared' : 'victory', store.player?.hp ?? 0)"
+              >
+                Продолжить поход
+              </button>
             <button
               v-if="store.phase === 'defeat'"
               @click="trial.onBattleEnd('defeat', 0)"

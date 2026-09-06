@@ -54,6 +54,8 @@ export interface CardDefinition {
   action: CardAction;
   /** Прирост характеристик за уровень улучшения в кузнице (+уровень * прирост) */
   upgradePerLevel?: Partial<Pick<CardAction, 'damage' | 'block' | 'heal'>>;
+  /** Проклятая карта: не играется, портит руку (наказания — в движке) */
+  curse?: boolean;
 }
 
 /** Конкретная карта в колоде игрока (с уникальным uid для отслеживания в руке/сбросе). */
@@ -96,6 +98,20 @@ export type GiftId = 'thorns' | 'first_strike' | 'soul_harvest';
 export interface GiftConfig {
   id: GiftId;
   level: number;
+}
+
+/** Модификаторы похода (благословения/проклятия — действуют до конца рана). */
+export interface RunModifiers {
+  /** +блок в начале каждого боя */
+  startBlock: number;
+  /** +карта при доборе в начале хода */
+  cardsPerTurnBonus: number;
+  /** множитель лечения (аддитивно к Разуму): −0.3 = исцеление на 30% слабее */
+  healMultBonus: number;
+  /** +% душ за бои похода */
+  soulsBonusPct: number;
+  /** +урон всем врагам похода */
+  enemyDmgBonus: number;
 }
 
 /**
@@ -149,9 +165,10 @@ import type { SceneId } from '@/core/assets';
 
 export type AIStyle = 'aggressive' | 'defensive' | 'tactical' | 'balanced';
 
-/** Действие при входе босса в фазу (лечит себя / бафается). */
+/** Действие при входе босса в фазу (лечит себя / бафается / броня). */
 export interface BossPhaseEnter {
   heal?: number;
+  block?: number;
   applyState?: { type: StateType; stacks: number; duration: number | null };
 }
 

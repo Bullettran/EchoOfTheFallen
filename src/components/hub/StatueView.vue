@@ -12,6 +12,7 @@ const statRows: { label: string; value: () => number }[] = [
   { label: 'Побед', value: () => meta.stats.victories },
   { label: 'Смертей', value: () => meta.stats.deaths },
   { label: 'Врагов повержено', value: () => meta.stats.enemiesSlain },
+  { label: 'Очков милосердия', value: () => meta.stats.mercyPoints },
   { label: 'Душ собрано', value: () => meta.stats.soulsEarned },
   { label: 'Уровней навыков', value: () => meta.totalSkillLevels },
 ];

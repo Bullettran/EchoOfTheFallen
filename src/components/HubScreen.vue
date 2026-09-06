@@ -72,6 +72,13 @@ const embark = (): void => {
         </span>
         <button
           class="res audio-btn"
+          :title="meta.fastAnimations ? 'Обычные анимации' : 'Быстрые анимации хода врага'"
+          @click="meta.fastAnimations = !meta.fastAnimations"
+        >
+          {{ meta.fastAnimations ? '⏩' : '🐢' }}
+        </button>
+        <button
+          class="res audio-btn"
           :title="meta.audioMuted ? 'Включить звук (M)' : 'Выключить звук (M)'"
           @click="toggleAudio"
         >

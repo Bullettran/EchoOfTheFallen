@@ -10,6 +10,7 @@ import {
   describeCardHtml,
 } from '@/game/CardFactory';
 import { scaleEnemy, rollEncounters } from '@/game/EnemyFactory';
+import { BOSS_POOL } from '@/data/enemies';
 import { BALANCE } from '@/core/config';
 
 describe('CardFactory', () => {
@@ -89,6 +90,6 @@ describe('EnemyFactory: скейлинг глубины', () => {
     const options = rollEncounters(BALANCE.progression.bossEveryDepth);
     expect(options).toHaveLength(1);
     expect(options[0]!.def.boss).toBeDefined();
-    expect(options[0]!.def.id).toBe('collector');
+    expect(BOSS_POOL).toContain(options[0]!.def.id);
   });
 });

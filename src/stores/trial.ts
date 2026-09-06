@@ -12,8 +12,11 @@ import { scaleEnemy } from '@/game/EnemyFactory';
 import { createCard } from '@/game/CardFactory';
 import { NORMAL_ENEMY_POOL, ELITE_ENEMY_POOL, BOSS_POOL } from '@/data/enemies';
 import { CARDS, CRAFT_POOL } from '@/data/cards';
+import { classCardPool } from '@/data/classes';
 import type { TrialFloor, TrialNode, TrialNodeType } from '@/types/trial';
-import type { CardInstance } from '@/types';
+import type { CardInstance, RunModifiers } from '@/types';
+
+export type { RunModifiers };
 
 const ELITE_POOL = ELITE_ENEMY_POOL;
 
@@ -28,7 +31,7 @@ function pick<T>(arr: T[]): T {
 export const NODE_META: Record<TrialNodeType, { label: string; icon: string; desc: string }> = {
   battle: { label: 'Схватка', icon: '⚔️', desc: 'Бой с обычным врагом. Победа приносит души; HP переносятся на следующие узлы.' },
   elite: { label: 'Лютый враг', icon: '💀', desc: 'Усиленный враг. Победа: редкая карта в походную колоду и больше душ.' },
-  event: { label: 'Находка', icon: '❓', desc: 'Случайная находка: карта в походную колоду, +40 душ или +10 HP.' },
+  event: { label: 'Находка', icon: '❓', desc: 'Встреча на пепелище: выбор одного из двух путей — души, лечение, реликвия или искушение.' },
   campfire: { label: 'Костёр', icon: '🔥', desc: 'Отдых у огня: +20 HP или улучшение одной карты (только на этот поход).' },
   shop: { label: 'Торговец', icon: '💰', desc: 'Покупка карт за души. Карты действуют только в этом походе.' },
   shrine: { label: 'Святыня', icon: '⚱', desc: 'Пепельная святыня: выбор одного из двух благословений — до конца похода.' },
@@ -37,19 +40,6 @@ export const NODE_META: Record<TrialNodeType, { label: string; icon: string; des
 };
 
 /** Модификаторы похода (действуют до конца рана; сливаются с статами класса в бою). */
-export interface RunModifiers {
-  /** +блок в начале каждого боя */
-  startBlock: number;
-  /** +карта при доборе в начале хода */
-  cardsPerTurnBonus: number;
-  /** множитель лечения (аддитивно к Разуму): −0.3 = исцеление на 30% слабее */
-  healMultBonus: number;
-  /** +% душ за бои похода */
-  soulsBonusPct: number;
-  /** +урон всем врагам похода */
-  enemyDmgBonus: number;
-}
-
 const EMPTY_RUN_MODS: RunModifiers = {
   startBlock: 0,
   cardsPerTurnBonus: 0,
@@ -142,6 +132,19 @@ export const CURSE_POOL: CurseOption[] = [
       useMetaStore().souls += 120;
     },
   },
+  {
+    id: 'tainted_gift',
+    name: 'Проклятая сделка',
+    desc: 'Пепельная смола ляжет в твою колоду (−2 HP за копию в начале хода), но +150 душ и 2 редкие карты',
+    accept: (t) => {
+      t.deck.push(createCard('curse_tar'));
+      const pool = Object.values(CRAFT_POOL).flat();
+      for (let i = 0; i < 2 && pool.length > 0; i++) {
+        t.deck.push(createCard(pool[Math.floor(Math.random() * pool.length)]!));
+      }
+      useMetaStore().souls += 150;
+    },
+  },
 ];
 
 /** Два случайных различных благословения для святыни. */
@@ -202,14 +205,17 @@ function genMap(): TrialFloor[] {
     if (f === 1 && !nodes.some((n) => n.type === 'battle')) {
       nodes[Math.floor(Math.random() * nodes.length)] = makeNode('battle', 0, pick(NORMAL_ENEMY_POOL));
     }
+    // Мини-босс середины: на eliteFloor хотя бы одна элита (по одному из двух)
+    if (f === BALANCE.progression.eliteFloor && !nodes.some((n) => n.type === 'elite')) {
+      nodes[Math.floor(Math.random() * nodes.length)] = makeNode('elite', 0, pick(ELITE_POOL));
+    }
     // Боссу восстанавливаем lane 0
     if (f === bossFloor) nodes[0]!.lane = 0;
     floors.push({ floor: f, nodes, edges: [] });
   }
 
-  // Рёбра: монотонное отображение индексов (тропы не пересекаются),
-  // j → base и j → base+1 (второе — не всегда, для вариативности);
-  // затем гарантируем достижимость каждого узла следующего этажа.
+  // Рёбра: монотонная основа j→base(j) (+ иногда j→base(j)+1), затем закрытие
+  // «дыр» монотонными rescue-рёбрами — тропы НЕ пересекаются по построению.
   for (let f = 0; f < floors.length - 1; f++) {
     const cur = floors[f]!;
     const next = floors[f + 1]!;
@@ -219,18 +225,32 @@ function genMap(): TrialFloor[] {
     const add = (a: number, b: number): void => {
       edges.add(`${a}:${b}`);
     };
-    for (let j = 0; j < n; j++) {
-      const base = n === 1 ? Math.floor(m / 2) : Math.round((j * (m - 1)) / (n - 1));
-      add(j, Math.min(base, m - 1));
-      if (base + 1 <= m - 1 && Math.random() < 0.55) add(j, base + 1);
-    }
-    for (let k = 0; k < m; k++) {
-      if (![...edges].some((e) => e.endsWith(`:${k}`))) {
-        const j = n === 1 ? 0 : Math.min(n - 1, Math.round((k * (n - 1)) / Math.max(m - 1, 1)));
-        add(j, k);
+    // Монотонное отображение индексов (n=1 → звезда во все узлы)
+    const baseOf = (j: number): number =>
+      n === 1 ? Math.floor(m / 2) : Math.round((j * (m - 1)) / (n - 1));
+    if (n === 1) {
+      for (let k = 0; k < m; k++) add(0, k);
+    } else {
+      for (let j = 0; j < n; j++) {
+        const base = baseOf(j);
+        add(j, base);
+        // Ветка +1 — только если не пересечётся с base следующего узла (m<n)
+        const nextBase = j + 1 < n ? baseOf(j + 1) : Infinity;
+        if (base + 1 <= m - 1 && base + 1 <= nextBase && Math.random() < 0.55) add(j, base + 1);
+      }
+      // Каждый узел следующего этажа достижим: для k без входящих добавляем
+      // ребро от j-1, где j — первый индекс с base(j) > k (сохраняет монотонность)
+      for (let k = 0; k < m; k++) {
+        if ([...edges].some((e) => e.endsWith(`:${k}`))) continue;
+        let j = 0;
+        while (j < n && baseOf(j) <= k) j++;
+        const from = j > 0 ? j - 1 : 0;
+        add(from, k);
       }
     }
-    cur.edges = [...edges].map((e) => e.split(':').map(Number) as [number, number]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    cur.edges = [...edges]
+      .map((e) => e.split(':').map(Number) as [number, number])
+      .sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   }
   return floors;
 }
@@ -265,6 +285,8 @@ export const useTrialStore = defineStore('trial', {
     purchasedFromShop: [] as string[],
     /** Модификаторы похода (благословения/проклятия — до конца рана) */
     runMods: { ...EMPTY_RUN_MODS } as RunModifiers,
+    /** Душ собрано за этот поход (для итогового экрана) */
+    runSouls: 0,
   }),
 
   getters: {
@@ -289,6 +311,12 @@ export const useTrialStore = defineStore('trial', {
       const { floorIdx } = findNode(state.floors, state.lastClearedId);
       return floorIdx === -1 ? 1 : Math.min(floorIdx + 2, state.floors.length);
     },
+    /** Босс повержен — поход пройден, показать финал (Механизм). */
+    bossDefeated(state): boolean {
+      if (!state.lastClearedId) return false;
+      const { floorIdx, idx } = findNode(state.floors, state.lastClearedId);
+      return floorIdx !== -1 && state.floors[floorIdx]!.nodes[idx]!.type === 'boss';
+    },
   },
 
   actions: {
@@ -302,7 +330,9 @@ export const useTrialStore = defineStore('trial', {
       this.maxHp = 70 + meta.combatStats.maxHpBonus;
       this.hp = this.maxHp;
       this.floor = 1;
-      this.depth = 1;
+      // NG+: каждый завершённый мир углубляет следующий поход (враги и награды масштабируются)
+      this.depth = meta.progress.depth;
+      this.runSouls = 0;
       this.floors = genMap();
       this.nodeState = null;
       this.currentNodeId = null;
@@ -379,29 +409,42 @@ export const useTrialStore = defineStore('trial', {
       );
     },
 
-    /** Бой завершён (вызывает battle-store). */
-    onBattleEnd(result: 'victory' | 'defeat', hpAfter: number): void {
+    /** Бой завершён (вызывает battle-store). 'spared' — враг пощажён. */
+    onBattleEnd(result: 'victory' | 'defeat' | 'spared', hpAfter: number): void {
       if (result === 'defeat') {
         this.exit();
         return;
       }
+      const spared = result === 'spared';
       // Тип узла фиксируем ДО очистки: clearNodeById перейдёт на следующий этаж
       const node = this.floors[this.floor - 1]?.nodes.find((n) => n.id === this.currentNodeId);
       const isBoss = node?.type === 'boss';
       const isElite = node?.type === 'elite';
       // Очищаем ИМЕННО тот узел который били
       this.clearNodeById(this.currentNodeId ?? '', hpAfter);
-      // Награда: души (+ бонус похода «Жадность») + шанс углей + карта за элиту
+      // Награда: души (+ бонус «Жадности»; пощада — половина душ и очко милосердия)
       const meta = useMetaStore();
-      const baseSouls = isBoss ? 80 : 30 + (this.depth - 1) * 5;
-      meta.souls += Math.round(baseSouls * (1 + this.runMods.soulsBonusPct / 100));
+      const T = BALANCE.trial;
+      let base = isBoss ? T.bossSouls : T.battleBaseSouls + (this.depth - 1) * T.battleSoulsPerDepth;
+      if (isElite) base = Math.round(base * T.eliteSoulsMult);
+      if (spared) {
+        base = Math.round(base * 0.5);
+        meta.stats.mercyPoints += 1;
+      }
+      const granted = Math.round(base * (1 + this.runMods.soulsBonusPct / 100));
+      meta.souls += granted;
+      this.runSouls += granted;
       if (isBoss) meta.essences += 1;
-      // Элита/босс: гарантированная случайная редкая карта в ПОХОДНУЮ колоду
+      // Элита/босс: гарантированная карта в ПОХОДНУЮ колоду —
+      // с шансом 40% классовая (углубляет билд класса)
       if (isElite || isBoss) {
-        const pool = Object.values(CRAFT_POOL).flat();
-        const defId = pick(pool.length > 0 ? pool : ['strike']);
-        const card = createCard(defId);
-        this.deck.push(card);
+        const meta2 = useMetaStore();
+        const craft = Object.values(CRAFT_POOL).flat();
+        const classPool = classCardPool(meta2.classId);
+        const pool = Math.random() < 0.4 && classPool.length > 0
+          ? classPool
+          : craft.length > 0 ? craft : ['strike'];
+        this.deck.push(createCard(pick(pool)));
       }
       useUiStore().setScreen('trial');
     },
@@ -449,7 +492,15 @@ export const useTrialStore = defineStore('trial', {
     },
 
     shopCost(): number {
-      return 60 + this.depth * 10;
+      const raw = BALANCE.trial.shopBaseCost + this.depth * BALANCE.trial.shopCostPerDepth;
+      // Скидка милосердия: 5% за каждое очко (пощада врагов), максимум 30%
+      const disc = Math.min(0.3, useMetaStore().stats.mercyPoints * 0.05);
+      return Math.max(10, Math.round(raw * (1 - disc)));
+    },
+
+    /** Текущая скидка милосердия (для подсказки торговца), в процентах. */
+    mercyDiscountPct(): number {
+      return Math.round(Math.min(0.3, useMetaStore().stats.mercyPoints * 0.05) * 100);
     },
   },
 });
